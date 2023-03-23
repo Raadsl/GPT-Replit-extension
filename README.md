@@ -1,0 +1,1 @@
+"A little ChatGPT in your Replit editor. If you a file with it the file contents will be passed to the AI so you can ask questions about it."
