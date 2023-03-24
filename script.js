@@ -1,5 +1,6 @@
 const submit = document.getElementById("send-button")
-
+const stopButton = document.getElementById("stop-button");
+let stopAI = false;
 function escapeHtml(unsafe) {
   return unsafe
     .replace(/&/g, "&amp;")
@@ -62,6 +63,7 @@ async function fetchAssistantResponse(apiKey, mode, history) {
 
 async function getResp() {
   submit.disabled = true;
+  stopButton.disabled = false;
   const file = await replit.me.filePath();
   const promptText = document.getElementById("user-message").value;
   messageCounter++;
@@ -98,14 +100,22 @@ async function getResp() {
     add_message({ type: 'error-msg', text: error }, messageCounter);
   }
   submit.disabled = false;
+  stopButton.disabled = true;
 }
 
 async function processResponse(response, messageId) {
   const reader = response.body.getReader();
   let resp = '';
   let chunks = '';
-  messageCounter++
+  messageCounter++;
   while (true) {
+    // Check if stopAI flag is set to true
+    if (stopAI) {
+      stopAI = false; // Reset the stopAI flag
+      stopButton.disabled = true;
+      break;
+    }
+
     const { done, value } = await reader.read();
     if (done) {
       break;
@@ -167,6 +177,9 @@ input.addEventListener("keypress", function(event) {
     event.preventDefault();
     submit.click();
   }
+});
+stopButton.addEventListener("click", () => {
+  stopAI = true;
 });
 
 async function main() {
