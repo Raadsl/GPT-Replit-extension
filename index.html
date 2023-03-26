@@ -4,9 +4,16 @@
   <meta charset="UTF-8">
   <title>GPT-Replit</title>
   <link rel="stylesheet" href="style.css">
-  <script src="https://unpkg.com/@replit/extensions@0.27.0/dist/index.global.js"></script>
+  <script src="https://unpkg.com/@replit/extensions@0.29.2/dist/index.global.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.3.1/styles/default.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.3.1/highlight.min.js"></script>
   <script src="script.js" defer></script>    
+  <script type='module'>
+  import themesLib from 'https://extension-theme-lib.potentialstyx.repl.co/module.js';
+
+  await themesLib(replit);
+  </script>
 </head>
 <body>
   <header>Replit-GPT</header>
@@ -20,7 +27,10 @@
       <button id="send-button"> Send </button>
     </div>
     <div class="user-input-container">
-      <input type="password" id="KEY" autocomplete="on"  placeholder="Enter your openAI API key." title="We won't store this ourself. If you don't believe me look at the source code. It's opensource! The API key will be stored in your localstorage!">
+      <input type="password" id="KEY" placeholder="Enter your openAI API key." title="We won't store this ourself. If you don't believe me look at the source code. It's opensource! The API key will be stored in your localstorage!">
+      <button id="clear-messages-button">Clear</button>
+
+      <button id="voice-input-button">🎤</button>
       <select id='mode'>
         <option value='3.5-turbo' selected>GPT-3.5</option>
         <option value='4'>GPT-4</option>

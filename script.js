@@ -1,6 +1,7 @@
 const submit = document.getElementById("send-button")
 const stopButton = document.getElementById("stop-button");
 let stopAI = false;
+let voice = false;
 function escapeHtml(unsafe) {
   return unsafe
     .replace(/&/g, "&amp;")
@@ -33,8 +34,55 @@ function add_message(x, id=null) {
 
   // Scroll to the bottom of the chat-messages div
   chatMessages.scrollTop = chatMessages.scrollHeight;
+  hljs.highlightAll();
 }
 
+function clearMessages() {
+  const chatMessages = document.getElementById('chat-messages');
+  while (chatMessages.firstChild) {
+    chatMessages.removeChild(chatMessages.firstChild);
+  }
+  // Reset the messageCounter
+  messageCounter = 1;
+  replit.messages.showConfirm("Cleared message history successfully!", 2000);
+}
+
+function startVoiceInput() {
+  const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+  recognition.lang = 'en-US';
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+  voice = true;
+  recognition.onresult = (event) => {
+    const speechResult = event.results[0][0].transcript;
+    document.getElementById('user-message').value = speechResult;
+  };
+
+  recognition.onerror = (event) => {
+    console.error('Speech recognition error:', event.error);
+  };
+
+  recognition.start();
+}
+
+function speak(text) {
+  const synth = window.speechSynthesis;
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = 'en-US';
+  synth.speak(utterance);
+}
+
+// Check if the browser supports SpeechRecognition
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (!SpeechRecognition) {
+  console.error('Your browser does not support the Web Speech API. Please use a supported browser, such as Google Chrome or Microsoft Edge.');
+  document.getElementById('voice-input-button').disabled = true;
+  document.getElementById('voice-input-button').title = `Your browser does not support the Web Speech API. Please use a supported browser, such as Google Chrome or Microsoft Edge.`;
+} else {
+  document.getElementById('voice-input-button').addEventListener('click', startVoiceInput);
+}
+const clearMessagesButton = document.getElementById('clear-messages-button');
+clearMessagesButton.addEventListener('click', clearMessages);
 
 function getSelectedMode() {
   const selectElement = document.getElementById("mode");
@@ -93,11 +141,15 @@ async function getResp() {
   // Fetch response from API and process it
   try {
     const response = await fetchAssistantResponse(apiKey, mode, history);
+    if(response.status != 200) {
+      throw new Error('Response status is '+response.status); 
+    }
     await processResponse(response, messageId);
   } catch (error) {
     console.error("Error fetching response:", error);
+    
     messageCounter++;
-    add_message({ type: 'error-msg', text: error }, messageCounter);
+    add_message({ type: 'error-msg', text: `Error fetching response` }, messageCounter);
   }
   submit.disabled = false;
   stopButton.disabled = true;
@@ -125,7 +177,6 @@ async function processResponse(response, messageId) {
     if (chunks.includes('data: [DONE]')) {
       break;
     }
-
     const regex = /^data:\s*(.+?)\s*$/gm;
     const jsonMatches = chunks.matchAll(regex);
 
@@ -141,6 +192,9 @@ async function processResponse(response, messageId) {
         }
       }
     }
+  }
+  if (voice) {
+    speak(resp);
   }
 }
 
@@ -183,6 +237,7 @@ stopButton.addEventListener("click", () => {
 });
 
 async function main() {
+  console.log("Main called")
   messageCounter++
   const file = await replit.me.filePath();
   if (file) {
