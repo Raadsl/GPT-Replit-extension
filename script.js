@@ -226,8 +226,9 @@ function extractMessages() {
 
 submit.addEventListener("click", getResp);
 var input = document.getElementById("user-message");
+
 input.addEventListener("keypress", function(event) {
-  if (event.key === "Enter") {
+  if (event.key === "Enter" && !event.shiftKey) {
     event.preventDefault();
     submit.click();
   }
@@ -251,6 +252,10 @@ async function main() {
   console.log("[Replit-GPT] loaded! V1.1")
 }
 
+function sleep(delay) {
+    var start = new Date().getTime();
+    while (new Date().getTime() < start + delay);
+}
 
 // Get the password input element
 const passwordInput = document.getElementById('KEY');

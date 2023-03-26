@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta charset="UTF-8">
   <title>GPT-Replit</title>
   <link rel="stylesheet" href="style.css">
-  <script src="https://unpkg.com/@replit/extensions@0.29.2/dist/index.global.js"></script>
+  <script src="https://unpkg.com/@replit/extensions@0.30.1/dist/index.global.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.3.1/styles/default.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.3.1/highlight.min.js"></script>
@@ -13,9 +14,24 @@
   import themesLib from 'https://extension-theme-lib.potentialstyx.repl.co/module.js';
 
   await themesLib(replit);
+  const loadingScreen = document.getElementById('loading-screen');
+  const mainContent = document.getElementById('main-content');
+  
+  mainContent.style.display = 'block';
+  loadingScreen.style.display = 'none';
   </script>
+  
 </head>
 <body>
+  <div id="loading-screen">
+    <div class="ring">Loading
+      <span></span>
+    </div>
+  </div>
+  
+  <div id="main-content" style="display:none;">
+    <!-- Your main content goes here -->
+  
   <header>Replit-GPT</header>
   
   <div class="chat-container">
@@ -39,4 +55,5 @@
     </div>
   </div>
 </body>
+  </div>
 </html>
