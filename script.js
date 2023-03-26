@@ -237,39 +237,12 @@ stopButton.addEventListener("click", () => {
   stopAI = true;
 });
 
-async function main() {
-  console.log("Main called")
-  messageCounter++
-  const file = await replit.me.filePath();
-  if (file) {
-    add_message({ type: 'received-msg', text: `Hi there, how can I help you? You can ask questions about the ${file} file` },1);
-    await replit.messages.showConfirm("Replit-GPT loaded", 2000);
-    await replit.messages.showNotice("The content of the file will be passed to the AI to improve performance!", 2000);
-  } else {
-    add_message({ type: 'received-msg', text: 'Hi there, how can I help you?' },1);
-    await replit.messages.showConfirm("Replit-GPT loaded", 2000);
-  }
-  console.log("[Replit-GPT] loaded! V1.1")
-}
-
-function sleep(delay) {
-    var start = new Date().getTime();
-    while (new Date().getTime() < start + delay);
-}
-
-// Get the password input element
+// Doesn't really work
 const passwordInput = document.getElementById('KEY');
-
-// Check if the password is already saved in the local storage
 const savedPassword = localStorage.getItem('OPENAI-API-KEY_GPT-REPLIT|V1.1');
 if (savedPassword) {
-  // If the password is saved, set it as the value of the password input
   passwordInput.value = savedPassword;
 }
-
-// Listen for changes to the password input
 passwordInput.addEventListener('input', () => {
-  // When the password is changed, save it to the local storage
   localStorage.setItem('password', passwordInput.value);
 });
-main()
