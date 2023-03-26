@@ -318,7 +318,7 @@ a::before{
   border-radius:50%;
   animation:animateC 2s linear infinite;
 }
-span
+circlespan
 {
   display:block;
   position:absolute;
@@ -330,7 +330,7 @@ span
   transform-origin:left;
   animation:animate 2s linear infinite;
 }
-span:before
+circlespan:before
 {
   content:'';
   position:absolute;
