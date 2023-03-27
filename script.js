@@ -113,6 +113,7 @@ async function getResp() {
   submit.disabled = true;
   stopButton.disabled = false;
   const file = await replit.me.filePath();
+  const currentfile = await replit.session.getActiveFile()
   const promptText = document.getElementById("user-message").value;
   messageCounter++;
   const messageId = messageCounter;
@@ -131,7 +132,18 @@ async function getResp() {
       content: `You are a helpful programming assistent called Replit-GPT. The user might ask something related to the contents of the file they opened you in (${file}). Here is the content:\n${filecontent.content}`
     };
     history.splice(1, 0, newObj);
-  } else {
+  } else if (currentfile) {
+    let filecontent = await replit.fs.readFile(currentfile, "utf8");
+    if (filecontent.error) {
+      await replit.messages.showError("Error reading file", 2000);
+    }
+    let newObj = {
+      role: "system",
+      content: `You are a helpful programming assistent called Replit-GPT. The user might ask something related to the contents of the file they opened you in (${currentfile}). Here is the content:\n${filecontent.content}`
+    };
+    history.splice(1, 0, newObj);
+  }
+  else {
     let newObj = { role: "system", content: `You are a helpful programming assistent called Replit-GPT.` };
     history.splice(0, 0, newObj);
   }

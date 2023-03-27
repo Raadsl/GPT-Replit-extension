@@ -13,10 +13,11 @@
 
   <script src="script.js" defer></script>    
   <script type='module'>
-
+  await replit.init({ permissions: []})
   import themesLib from 'https://extension-theme-lib.potentialstyx.repl.co/module.js';
     try {
       await themesLib(replit);
+      const currentfile = await replit.session.getActiveFile()
       const file = await replit.me.filePath();
       if (file) {
         add_message({ type: 'received-msg', text: `Hi there, how can I help you? You can ask questions about the ${file} file` },1);
@@ -24,10 +25,12 @@
         await replit.messages.showNotice("The content of the file will be passed to the AI to improve performance!", 2200);
       } else {
         add_message({ type: 'received-msg', text: 'Hi there, how can I help you?' },1);
+        }
+        
         await replit.messages.showConfirm("Replit-GPT loaded", 2000);
       }
-    } catch { 
-      console.error(`Not opened as extension`)
+    } catch(err) { 
+      console.error(`Not opened as extensionm, ${err}`)
       add_message({ type: 'received-msg', text: 'Hi there, how can I help you? I was made to be a Replit extension but you can also just use me in the browser!' },1);
     }
     const loadingScreen = document.getElementById('loading-screen');
