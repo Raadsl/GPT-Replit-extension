@@ -14,9 +14,25 @@
   <script src="script.js" defer></script>    
   <script type='module'>
   await replit.init({ permissions: []})
-  import themesLib from 'https://extension-theme-lib.potentialstyx.repl.co/module.js';
     try {
-      await themesLib(replit);
+      replit.theme.getCurrentTheme().then(theme => {
+            console.log(theme)
+            for (const value in theme.values.global) {
+                
+                if (!value.startsWith('_')) {
+                    const ACCENTS = ["red","orange","yellow","lime","green","teal","blue","blue","blurple","purple","magenta","pink","grey","brown"];
+                    let accent = "";
+                    for (let accentColor of ACCENTS) {
+                      if (value.startsWith(accentColor)){
+                        accent = "accent-";
+                        break;
+                      }
+                    }
+                    const cssVariableName = '--' + accent + value.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`)
+                    document.documentElement.style.setProperty(cssVariableName, theme.values.global[value])
+                }
+            }
+        })
       const currentfile = await replit.session.getActiveFile()
       const file = await replit.me.filePath();
       if (file) {
@@ -69,6 +85,7 @@
       <select id='mode'>
         <option value='3.5-turbo' selected>GPT-3.5</option>
         <option value='4'>GPT-4</option>
+        <option value='4-32k'>GPT-4 32K</option>
       </select>
       <button id="stop-button" disabled>Stop</button>
     </div>
