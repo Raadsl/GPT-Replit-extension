@@ -5,17 +5,17 @@
   <meta charset="UTF-8">
   <title>GPT-Replit</title>
   <link rel="stylesheet" href="style.css">
-  <script src="https://unpkg.com/@replit/extensions@0.30.1/dist/index.global.js" async></script>
+  <script src="https://unpkg.com/@replit/extensions@1.3.0-beta.1/dist/index.global.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.3.1/styles/default.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.3.1/highlight.min.js"></script>
-
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
 
   <script src="script.js" defer></script>    
   <script type='module'>
-  await replit.init({ permissions: []})
     try {
-      replit.theme.getCurrentTheme().then(theme => {
+      await replit.init({ permissions: []})
+      await replit.themes.getCurrentTheme().then(theme => {
             console.log(theme)
             for (const value in theme.values.global) {
                 
@@ -39,13 +39,44 @@
         add_message({ type: 'received-msg', text: `Hi there, how can I help you? You can ask questions about the ${file} file` },1);
         await replit.messages.showConfirm("Replit-GPT loaded", 2001);
         await replit.messages.showNotice("The content of the file will be passed to the AI to improve performance!", 2200);
+
+        //add api key
+        const output = await replit.fs.readFile("./.env")
+        if(output.content !== null) {
+          const openAIKeyRegex = /OPENAI_API_KEY="(.+?)"/;
+          const match = output.content.match(openAIKeyRegex);
+          
+          if (match) {
+            const openAI_API_KEY = match[1];
+            console.log('OpenAI API Key found!');
+            document.getElementById("KEY").value = openAI_API_KEY
+            await replit.messages.showNotice("Loaded the openAI API key from your secrets!", 4000);
+          } else {
+            console.log('OpenAI API Key not found in secrets');
+          }
+        }
       } else {
-        add_message({ type: 'received-msg', text: 'Hi there, how can I help you?' },1);
-        await replit.messages.showConfirm("Replit-GPT loaded", 2000);
+          add_message({ type: 'received-msg', text: 'Hi there, how can I help you?' },1);
+          await replit.messages.showConfirm("Replit-GPT loaded", 2000);
+          // add api key
+          const output = await replit.fs.readFile("./.env")
+        if(output.content !== null) {
+          const openAIKeyRegex = /OPENAI_API_KEY="(.+?)"/;
+          const match = output.content.match(openAIKeyRegex);
+          
+          if (match) {
+            const openAI_API_KEY = match[1];
+            console.log('OpenAI API Key found!');
+            document.getElementById("KEY").value = openAI_API_KEY
+            await replit.messages.showNotice("Loaded the openAI API key from your secrets!", 4000);
+          } else {
+            console.log('OpenAI API Key not found in secrets');
+          }
+        }
         }
     }
     catch(err) { 
-      console.error(`Not opened as extensionm, ${err}`)
+      console.error(`Not opened as extension, ${err}`)
       add_message({ type: 'received-msg', text: 'Hi there, how can I help you? I was made to be a Replit extension but you can also just use me in the browser!' },1);
     }
     const loadingScreen = document.getElementById('loading-screen');
@@ -53,7 +84,7 @@
     
     mainContent.style.display = 'block';
     loadingScreen.style.display = 'none';
-  console.log("[Replit-GPT] loaded! V1.1")
+  console.log("[Replit-GPT] loaded! V1.2")
   </script>
   
 </head>

@@ -1,12 +1,11 @@
 {
   "name": "GPT-Replit",
-  "description": "A little ChatGPT in your Replit editor, that can view your files.",
-  "longDescription": "A little ChatGPT in your Replit editor. If you a file with it the file contents will be passed to the AI so you can ask questions about it.",
+  "description": "A little ChatGPT in your Replit editor that can view your files (if you want).",
+  "longDescription": "A little ChatGPT in your Replit editor. If you opena a file with it the file contents will be passed to the AI so you can ask questions about it.",
   "version": "0",
-  "tags": ["ChatGPT", "GPT", "editor", "AI", "Raadsel", "Chat", "new", "coding", "help", "GPT-3", "GPT-4", "supports Replit theme", "voice", "voice support"],
-  "icon": "icon.png",
-  "website": "https://replit.com/@Raadsel/SQL-Extension?v=1",
-  "supportEmail": "ext.support+ReplGPT@jorik.email",
+  "tags": ["ChatGPT", "GPT", "editor", "AI", "Raadsel", "Chat", "coding", "GPT-3", "GPT-4", "voice", "voice support"],
+  "icon": "icon.svg",
+  "website": "https://replit.com/@Raadsel/GPT-Replit?v=1",
   "coverImages": [
     {
       "path": "cover.png",
@@ -15,8 +14,17 @@
   ],
   "fileHandlers": [
     {
-      "glob": "*.*",
+      "glob": "**/*",
       "handler": "/"
+    }
+  ],
+  "tools": [
+	  {"name": "GPT-Replit", "handler":"/", "icon":"toolIcon.svg"}
+  ],
+  "scopes": [
+    {
+      "name": "read",
+      "reason": "Reading the opened file to provide more information to GPT"
     }
   ]
 }

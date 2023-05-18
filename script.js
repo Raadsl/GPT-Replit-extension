@@ -30,7 +30,7 @@ function add_message(x, id=null) {
 
   // Update the message content
   
-  messageDiv.innerHTML = marked.parse(x.text);
+  messageDiv.innerHTML = marked.parse(x.text, { mangle: false, headerIds: false});
 
   // Scroll to the bottom of the chat-messages div
   chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -251,7 +251,7 @@ stopButton.addEventListener("click", () => {
 
 // Doesn't really work
 const passwordInput = document.getElementById('KEY');
-const savedPassword = localStorage.getItem('OPENAI-API-KEY_GPT-REPLIT|V1.1');
+const savedPassword = localStorage.getItem('OPENAI-API-KEY_GPT-REPLIT|V1.2');
 if (savedPassword) {
   passwordInput.value = savedPassword;
 }

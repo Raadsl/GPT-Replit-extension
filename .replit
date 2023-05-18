@@ -4,7 +4,10 @@ hidden=[".config"]
 # [hosting]
 # route = "/"
 # directory= "/"
-
+[extension]
+isExtension = true
+outputDirectory = "./"
+extensionID = "929d2f2e-70e3-407b-b5c7-9b5d4c8e7e20"
 [nix]
 channel = "stable-21_11"
 
