@@ -35,8 +35,8 @@
             }
         })
       }
-      updateTheme()
-      replit.themes.onThemeChange(updateTheme)
+      await updateTheme()
+      await replit.themes.onThemeChange(updateTheme)
       const currentfile = await replit.session.getActiveFile()
       const file = await replit.me.filePath();
       if (file) {
