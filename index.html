@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <title>GPT-Replit</title>
   <link rel="stylesheet" href="style.css">
-  <script src="https://unpkg.com/@replit/extensions@1.3.0-beta.1/dist/index.global.js"></script>
+  <script src="https://unpkg.com/@replit/extensions@1.6.0/dist/index.global.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.3.1/styles/default.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.3.1/highlight.min.js"></script>
@@ -15,7 +15,8 @@
   <script type='module'>
     try {
       await replit.init({ permissions: []})
-      await replit.themes.getCurrentTheme().then(theme => {
+      async function updateTheme() {
+        await replit.themes.getCurrentTheme().then(theme => {
             console.log(theme)
             for (const value in theme.values.global) {
                 
@@ -33,6 +34,9 @@
                 }
             }
         })
+      }
+      updateTheme()
+      replit.themes.onThemeChange(updateTheme)
       const currentfile = await replit.session.getActiveFile()
       const file = await replit.me.filePath();
       if (file) {
@@ -84,13 +88,13 @@
     
     mainContent.style.display = 'block';
     loadingScreen.style.display = 'none';
-  console.log("[Replit-GPT] loaded! V1.2")
+  console.log("[Replit-GPT] loaded! V1.3")
   </script>
   
 </head>
 <body>
   <div id="loading-screen">
-    <div class="ring">Loading
+    <div title="We're initializing the extension" class="ring">Loading
       <circlespan></circlespan>
     </div>
   </div>
@@ -105,20 +109,20 @@
       <!-- Chat messages will go here -->
     </div>
     <div class="user-input-container">
-      <input type="text" id="user-message" placeholder="Type your message...">
-      <button id="send-button"> Send </button>
+      <input title="Enter your message here" type="text" id="user-message" placeholder="Type your message...">
+      <button title='Sends the message' id="send-button"> Send </button>
     </div>
     <div class="user-input-container">
-      <input type="password" id="KEY" placeholder="Enter your openAI API key." title="We won't store this ourself. If you don't believe me look at the source code. It's opensource! The API key will be stored in your localstorage!">
-      <button id="clear-messages-button">Clear</button>
+      <input type="password" id="KEY" placeholder="Enter your openAI API key." title="We won't store this ourself. If you don't believe me look at the source code. No requests are made except to openAI's server">
+      <button title='Clears the message history' id="clear-messages-button">Clear</button>
 
-      <button id="voice-input-button">🎤</button>
-      <select id='mode'>
+      <button title="activates voice mode" id="voice-input-button">🎤</button>
+      <select title="select which GPT you want to use." id='mode'>
         <option value='3.5-turbo' selected>GPT-3.5</option>
         <option value='4'>GPT-4</option>
         <option value='4-32k'>GPT-4 32K</option>
       </select>
-      <button id="stop-button" disabled>Stop</button>
+      <button title="Stops the AI from responding" id="stop-button" disabled>Stop</button>
     </div>
   </div>
 </body>

@@ -1,11 +1,11 @@
 {
   "name": "GPT-Replit",
   "description": "A little ChatGPT in your Replit editor that can view your files (if you want).",
-  "longDescription": "A little ChatGPT in your Replit editor. If you opena a file with it the file contents will be passed to the AI so you can ask questions about it.",
+  "longDescription": "A little ChatGPT in your Replit editor. If you open a file with GPT-replit, the file contents will be passed to the AI so you can ask questions about it.",
   "version": "0",
-  "tags": ["ChatGPT", "GPT", "editor", "AI", "Raadsel", "Chat", "coding", "GPT-3", "GPT-4", "voice", "voice support"],
+  "tags": ["ChatGPT", "GPT", "GPT-4", "AI", "GPT-3", "Raadsel", "read files", "voice", "chat"],
   "icon": "icon.svg",
-  "website": "https://replit.com/@Raadsel/GPT-Replit?v=1",
+  "website": "https://www.raadsel.tech",
   "coverImages": [
     {
       "path": "cover.png",
@@ -26,5 +26,6 @@
       "name": "read",
       "reason": "Reading the opened file to provide more information to GPT"
     }
-  ]
+  ],
+  "background": null
 }

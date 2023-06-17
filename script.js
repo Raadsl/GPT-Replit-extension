@@ -1,5 +1,6 @@
 const submit = document.getElementById("send-button")
 const stopButton = document.getElementById("stop-button");
+let maxContent = 4000
 let stopAI = false;
 let voice = false;
 function escapeHtml(unsafe) {
@@ -44,7 +45,7 @@ function clearMessages() {
   }
   // Reset the messageCounter
   messageCounter = 1;
-  replit.messages.showConfirm("Cleared message history successfully!", 2000);
+  replit.messages.showConfirm("Cleared message history successfully!", 1500);
 }
 
 function startVoiceInput() {
@@ -129,17 +130,17 @@ async function getResp() {
     }
     let newObj = {
       role: "system",
-      content: `You are a helpful programming assistent called Replit-GPT. The user might ask something related to the contents of the file they opened you in (${file}). Here is the content:\n${filecontent.content}`
+      content: `You are a helpful programming assistent called Replit-GPT. The user might ask something related to the contents of the file they opened you in (${file}). Here is the content:\n${filecontent.content.substring(0, maxContent)}`
     };
     history.splice(1, 0, newObj);
   } else if (currentfile) {
     let filecontent = await replit.fs.readFile(currentfile, "utf8");
     if (filecontent.error) {
-      await replit.messages.showError("Error reading file", 2000);
+      await replit.messages.showError("Error reading file: "+filecontent.error, 3000);
     }
     let newObj = {
       role: "system",
-      content: `You are a helpful programming assistent called Replit-GPT. The user might ask something related to the contents of the file they opened you in (${currentfile}). Here is the content:\n${filecontent.content}`
+      content: `You are a helpful programming assistent called Replit-GPT. The user might ask something related to the contents of the file they opened you in (${currentfile}). Here is the content:\n${filecontent.content.substring(0, maxContent)}`
     };
     history.splice(1, 0, newObj);
   }
@@ -177,6 +178,7 @@ async function processResponse(response, messageId) {
     if (stopAI) {
       stopAI = false; // Reset the stopAI flag
       stopButton.disabled = true;
+      replit.messages.showWarning("Stopped generating!", 1000)
       break;
     }
 
@@ -251,10 +253,31 @@ stopButton.addEventListener("click", () => {
 
 // Doesn't really work
 const passwordInput = document.getElementById('KEY');
-const savedPassword = localStorage.getItem('OPENAI-API-KEY_GPT-REPLIT|V1.2');
+const savedPassword = localStorage.getItem('OPENAI-API-KEY_GPT-REPLIT|V1.3');
 if (savedPassword) {
   passwordInput.value = savedPassword;
 }
 passwordInput.addEventListener('input', () => {
   localStorage.setItem('password', passwordInput.value);
 });
+
+function updateInputMaxLength() {
+  const userMessageInput = document.getElementById("user-message");
+  const selectedMode = getSelectedMode();
+
+  if (selectedMode === "3.5-turbo") {
+    userMessageInput.maxLength = 4000;
+    maxContent = 4000
+  } else if (selectedMode === "4") {
+    userMessageInput.maxLength = 8000;
+    maxContent = 32000
+  } else if (selectedMode === "4-32k") {
+    userMessageInput.maxLength = 32000;
+    maxContent = 32000
+  }
+}
+
+
+const modeSelector = document.getElementById("mode");
+modeSelector.addEventListener("change", updateInputMaxLength);
+updateInputMaxLength();
