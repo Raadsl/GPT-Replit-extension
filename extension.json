@@ -1,7 +1,7 @@
 {
   "name": "GPT-Replit",
   "description": "A little ChatGPT in your Replit editor that can view your files (if you want).",
-  "longDescription": "A little ChatGPT in your Replit editor. If you open a file with GPT-replit, the file contents will be passed to the AI so you can ask questions about it.",
+  "longDescription": "A little ChatGPT in your Replit editor. If you open a file with GPT-replit, the file contents will be passed to the AI so you can ask questions about it.\n\nYou can double click codeblocks to copy them, use your voice, use GPT-4 & 3.5 (if you have access) and more!",
   "version": "0",
   "tags": ["ChatGPT", "GPT", "GPT-4", "AI", "GPT-3", "Raadsel", "read files", "voice", "chat"],
   "icon": "icon.svg",
@@ -9,7 +9,7 @@
   "coverImages": [
     {
       "path": "cover.png",
-      "label": "Screenshot of GPT-Replit"
+      "label": "preview of extension"
     }
   ],
   "fileHandlers": [
