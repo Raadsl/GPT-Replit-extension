@@ -160,6 +160,7 @@ code {
   margin-left: auto;
   white-space: pre-wrap;
   word-wrap: break-word;
+  border-radius: 20px 20px 0px 20px;
 }
 
 
@@ -168,6 +169,7 @@ code {
   color: var(--foreground-default, white);
   white-space: pre-wrap;
   word-wrap: break-word;
+  border-radius: 20px 20px 20px 0px;
 }
 
 
@@ -202,9 +204,9 @@ select:focus,
 }
 
 
-a{
+a {
   text-decoration: none;
-  color: var(--link-color, #0074D9);
+  color: var(--link-color, #d24141);
 }
 
 

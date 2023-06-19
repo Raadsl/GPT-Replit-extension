@@ -4,17 +4,46 @@ let maxContent = 4000
 let stopAI = false;
 let voice = false;
 function escapeHtml(unsafe) {
-  return unsafe
+  let clean = unsafe
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+  return DOMPurify.sanitize(clean, { USE_PROFILES: { html: true } });
+
 }
+
+let clickTimer = null;
+
+function onCodeBlockMouseDown(e) {
+  const codeBlock = e.target;
+
+  if (clickTimer === null) {
+    clickTimer = setTimeout(() => {
+      clickTimer = null;
+    }, 300);
+  } else {
+    clearTimeout(clickTimer);
+    clickTimer = null;
+    copyCodeBlock(codeBlock);
+  }
+}
+
+function copyCodeBlock(codeBlock) {
+  const range = document.createRange();
+  range.selectNodeContents(codeBlock);
+  window.getSelection().removeAllRanges();
+  window.getSelection().addRange(range);
+  document.execCommand('copy');
+  window.getSelection().removeAllRanges();
+  replit.messages.showConfirm('Code block copied!', 1500);
+}
+
 
 function add_message(x, id=null) {
   const chatMessages = document.getElementById('chat-messages');
-
+  const isNearBottom = chatMessages.scrollHeight - chatMessages.clientHeight - chatMessages.scrollTop < 50;
   // Find the existing message div with the specified ID, or create a new one
   let messageDiv = null;
   if (id !== null) {
@@ -29,12 +58,17 @@ function add_message(x, id=null) {
     chatMessages.appendChild(messageDiv);
   }
 
-  // Update the message content
   
   messageDiv.innerHTML = marked.parse(x.text, { mangle: false, headerIds: false});
-
+  messageDiv.querySelectorAll('pre code').forEach((codeBlock) => {
+    codeBlock.style.cursor = 'pointer';
+    codeBlock.title = 'Double-click to copy';
+    codeBlock.addEventListener('mousedown', onCodeBlockMouseDown);
+  });
   // Scroll to the bottom of the chat-messages div
-  chatMessages.scrollTop = chatMessages.scrollHeight;
+  if (isNearBottom) {
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
   hljs.highlightAll();
 }
 
@@ -253,7 +287,7 @@ stopButton.addEventListener("click", () => {
 
 // Doesn't really work
 const passwordInput = document.getElementById('KEY');
-const savedPassword = localStorage.getItem('OPENAI-API-KEY_GPT-REPLIT|V1.3');
+const savedPassword = localStorage.getItem('OPENAI-API-KEY_GPT-REPLIT|V1.4');
 if (savedPassword) {
   passwordInput.value = savedPassword;
 }
