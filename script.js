@@ -18,7 +18,6 @@ let clickTimer = null;
 
 function onCodeBlockMouseDown(e) {
   const codeBlock = e.target;
-
   if (clickTimer === null) {
     clickTimer = setTimeout(() => {
       clickTimer = null;
@@ -43,8 +42,7 @@ function copyCodeBlock(codeBlock) {
 
 function add_message(x, id=null) {
   const chatMessages = document.getElementById('chat-messages');
-  const isNearBottom = chatMessages.scrollHeight - chatMessages.clientHeight - chatMessages.scrollTop < 50;
-  // Find the existing message div with the specified ID, or create a new one
+  const isNearBottom = chatMessages.scrollHeight - chatMessages.clientHeight - chatMessages.scrollTop < 60;
   let messageDiv = null;
   if (id !== null) {
     messageDiv = document.getElementById(`message-${id}`);
@@ -193,7 +191,7 @@ async function getResp() {
     }
     await processResponse(response, messageId);
   } catch (error) {
-    console.error("Error fetching response:", error);
+    await replit.debug.error("Error fetching response", error);
     
     messageCounter++;
     add_message({ type: 'error-msg', text: `Error fetching response` }, messageCounter);
