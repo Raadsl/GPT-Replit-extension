@@ -16,9 +16,9 @@ body {
 header {
   background: var(--background-higher, #0d0d0d);
   color: var(--foreground-default);
-  padding: 20px;
+  padding: 10px;
   text-align: center;
-  font-size: 60px;
+  font-size: 30px;
   font-weight: bold;
   font-family: 'IBM Plex Sans', sans-serif;
   text-shadow: 0 0 10px var(--accent-primary-default);

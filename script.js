@@ -57,7 +57,8 @@ function add_message(x, id=null) {
   }
 
   
-  messageDiv.innerHTML = marked.parse(x.text, { mangle: false, headerIds: false});
+  messageDiv.innerHTML = marked.parse(x.text, { mangle: false, headerIds: false });
+
   messageDiv.querySelectorAll('pre code').forEach((codeBlock) => {
     codeBlock.style.cursor = 'pointer';
     codeBlock.title = 'Double-click to copy';
@@ -117,16 +118,21 @@ if (!SpeechRecognition) {
 const clearMessagesButton = document.getElementById('clear-messages-button');
 clearMessagesButton.addEventListener('click', clearMessages);
 
-function getSelectedMode() {
-  const selectElement = document.getElementById("mode");
-  const selectedMode = selectElement.options[selectElement.selectedIndex].value;
-  return selectedMode;
+async function getSelectedMode() {
+  const settings = await parseSettingsFile();
+  if (settings && settings.model) {
+    return settings.model;
+  } else {
+    const selectElement = document.getElementById("mode");
+    const selectedMode = selectElement.options[selectElement.selectedIndex].value;
+    return selectedMode;
+  }
 }
 
 let messageCounter = 1;
 
 
-async function fetchAssistantResponse(apiKey, mode, history) {
+async function fetchAssistantResponse(apiKey, mode, history, temperature) {
   return await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -134,12 +140,34 @@ async function fetchAssistantResponse(apiKey, mode, history) {
       'Authorization': 'Bearer ' + apiKey
     },
     body: JSON.stringify({
-      'model': `gpt-${mode}`,
-      'messages': history,
-      'temperature': 0.7,
-      'stream': true
-    })
+    'model': mode,
+    'messages': history,
+    'temperature': parseFloat(temperature), 
+    'stream': true
+  })
   });
+}
+async function parseSettingsFile() {
+  try {
+    const settingsContent = await replit.fs.readFile('settings.gptreplit', 'utf8');
+    
+    if (settingsContent.error) {
+      return null;
+    }
+    
+    const settingsLines = settingsContent.content.split('\n');
+    const settings = {};
+
+    for (const line of settingsLines) {
+      const [key, value] = line.split(':');
+      settings[key] = value;
+    }
+
+    return settings;
+  } catch (error) {
+    console.error('Error reading settings.gptreplit file:', error);
+    return null;
+  }
 }
 
 async function getResp() {
@@ -154,6 +182,7 @@ async function getResp() {
   document.getElementById("user-message").value = "";
   const apiKey = document.getElementById("KEY").value;
   const history = extractMessages();
+
   // Add file content to history if available
   if (file) {
     let filecontent = await replit.fs.readFile(file, "utf8");
@@ -181,20 +210,22 @@ async function getResp() {
     history.splice(0, 0, newObj);
   }
 
-  const mode = getSelectedMode();
+  const mode = await getSelectedMode();
+  const settings = await parseSettingsFile();
+  const customTemperature = settings && settings.temperature ? parseFloat(settings.temperature) : 0.7;
 
-  // Fetch response from API and process it
   try {
-    const response = await fetchAssistantResponse(apiKey, mode, history);
-    if(response.status != 200) {
-      throw new Error('Response status is '+response.status); 
+   const response = await fetchAssistantResponse(apiKey, mode, history, customTemperature);
+    if (response.status !== 200) {
+      const errorResponse = await response.json();
+      throw new Error(errorResponse.error.message);
     }
     await processResponse(response, messageId);
   } catch (error) {
-    await replit.debug.error("Error fetching response", error);
+    console.error('Error fetching response:', error.message);
     
     messageCounter++;
-    add_message({ type: 'error-msg', text: `Error fetching response` }, messageCounter);
+    add_message({ type: 'error-msg', text: `Error fetching response, ${error.message} , ${mode}` }, messageCounter);
   }
   submit.disabled = false;
   stopButton.disabled = true;
@@ -263,8 +294,6 @@ function extractMessages() {
     messageHistory.push(messageObject);
   }
 
-
-  console.log(messageHistory);
   return messageHistory;
 }
 
