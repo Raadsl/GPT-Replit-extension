@@ -1,6 +1,6 @@
 const submit = document.getElementById("send-button")
 const stopButton = document.getElementById("stop-button");
-let maxContent = 4000
+let maxContent = 4000 * 2
 let stopAI = false;
 let voice = false;
 function escapeHtml(unsafe) {
@@ -105,7 +105,7 @@ function add_message(x, id=null) {
   }
 
   
-  messageDiv.innerHTML = marked.parse((x.text), { mangle: false, headerIds: false });
+  messageDiv.innerHTML = DOMPurify.sanitize(marked.parse((x.text), { mangle: false, headerIds: false }), { USE_PROFILES: { html: true } });
 
   messageDiv.querySelectorAll('pre code').forEach((codeBlock) => {
     codeBlock.style.cursor = 'pointer';
@@ -222,7 +222,7 @@ async function getResp() {
   submit.disabled = true;
   stopButton.disabled = false;
   const file = await replit.me.filePath();
-  
+ 
   const promptText = document.getElementById("user-message").value;
   messageCounter++;
   const messageId = messageCounter;
@@ -241,22 +241,28 @@ async function getResp() {
       content: `You are a helpful programming assistent called Replit-GPT. The user might ask something related to the contents of the file they opened you in (${file}). Here is the content:\n${filecontent.content.substring(0, maxContent)}`
     };
     history.splice(1, 0, newObj);
-  } else if (getCurrentFile()) {
-    let filecontent = await replit.fs.readFile(getCurrentFile(),);
+  } else if (getCurrentFile() !== null) {
+    try {
+    let filecontent = await replit.fs.readFile(getCurrentFile());
     if (filecontent.error) {
       await replit.messages.showError("Error reading file: "+filecontent.error, 3000);
     }
     let newObj = {
       role: "system",
-      content: `You are a helpful programming assistent called Replit-GPT. The user might ask something related to the contents of the file they opened recently (${getCurrentFile()}). Here is the content:\n${filecontent.content.substring(0, 4000)}`
+      content: `You are a helpful programming assistent called Replit-GPT. The user might ask something related to the contents of the file they opened recently (${getCurrentFile()}). Here is the first 4k characters of the content:\n${filecontent.content.substring(0, 4000)}`
     };
     history.splice(1, 0, newObj);
+    } catch(err) {
+      console.log(err)
+      
+    }
   }
   else {
     let newObj = { role: "system", content: `You are a helpful programming assistent called Replit-GPT.` };
     history.splice(0, 0, newObj);
   }
 
+  } 
   const mode = await getSelectedMode();
   const settings = await parseSettingsFile();
   const customTemperature = settings && settings.temperature ? parseFloat(settings.temperature) : 0.7;
@@ -361,7 +367,7 @@ stopButton.addEventListener("click", () => {
 
 const passwordInput = document.getElementById('KEY');
 const savedPassword = localStorage.getItem('OPENAI-API-KEY_GPT-REPLIT|V1.5');
-if (savedPassword) {
+if (savedPassword && passwordInput.value != null) {
   passwordInput.value = savedPassword;
   replit.messages.showNotice("Loaded OpenAI API Key from previous session.", 2000)
 }
@@ -369,20 +375,32 @@ passwordInput.addEventListener('change', () => {
   localStorage.setItem('OPENAI-API-KEY_GPT-REPLIT|V1.5', passwordInput.value);
 });
 
-function updateInputMaxLength() {
+async function updateInputMaxLength() {
   const userMessageInput = document.getElementById("user-message");
-  const selectedMode = getSelectedMode();
-
-  if (selectedMode === "3.5-turbo") {
-    userMessageInput.maxLength = 4000;
-    maxContent = 4000
-  } else if (selectedMode === "4") {
-    userMessageInput.maxLength = 8000;
-    maxContent = 32000
-  } else if (selectedMode === "4-32k") {
-    userMessageInput.maxLength = 32000;
-    maxContent = 32000
+  const selectedMode = await getSelectedMode();
+  if (selectedMode === "gpt-3.5-turbo") {
+    userMessageInput.maxLength = 4000 * 3;
+    maxContent = 4000 * 3
+    localStorage.setItem('selectedMode', selectedMode);
+  } else if (selectedMode === "gpt-4") {
+    userMessageInput.maxLength = 8000 * 3;
+    maxContent = 32000 * 3
+    localStorage.setItem('selectedMode', selectedMode);
+  } else if (selectedMode === "gpt-4-32k") {
+    userMessageInput.maxLength = 32000 * 3;
+    maxContent = 32000 * 3
+    localStorage.setItem('selectedMode', selectedMode);
   }
+  
+}
+
+function loadPreviousMode() {
+  const previousMode = localStorage.getItem('selectedMode');
+  console.log(previousMode)
+  if(previousMode){
+      modeSelector.value = previousMode;
+  }
+  updateInputMaxLength();
 }
 
 async function showSettings() {
@@ -454,4 +472,4 @@ document.getElementById('settings-btn').addEventListener('click', async () => {
 
 const modeSelector = document.getElementById("mode");
 modeSelector.addEventListener("change", updateInputMaxLength);
-updateInputMaxLength();
+loadPreviousMode()
