@@ -63,6 +63,7 @@
             await replit.messages.showNotice("Loaded the openAI API key from your secrets!", 4000);
           } else {
             console.log('OpenAI API Key not found in secrets');
+            
           }
         }
       } else {
@@ -94,7 +95,7 @@
     
     mainContent.style.display = 'block';
     loadingScreen.style.display = 'none';
-  console.log("[Replit-GPT] loaded! V1.4")
+  console.log("[Replit-GPT] loaded! V1.5")
   </script>
   
 </head>
@@ -115,6 +116,7 @@
     </div>
     <div class="user-input-container">
       <input title="Enter your message here" type="text" id="user-message" placeholder="Type your message...">
+      <button id="settings-btn">Settings</button>
       <button title='Sends the message' id="send-button"> Send </button>
     </div>
     <div class="user-input-container">
@@ -132,4 +134,18 @@
   </div>
 </body>
   </div>
+<div id="settings-modal" class="modal">
+  <div class="modal-content">
+    <span class="close">&times;</span>
+    <button class='button' id="export-messages-button">Export Messages</button>
+    <button class='button' id="import-messages-button">Import Messages</button>
+    <input type="file" id="import-file" style="display: none;">
+    <label for="temperature">Temperature:</label>
+    <input type="text" id="temperature">
+  
+    <label for="model">Model:</label>
+    <input type="text" id="model">
+    <button class='button' id="save-settings-button">Copy Settings</button>
+  </div>
+</div>
 </html>

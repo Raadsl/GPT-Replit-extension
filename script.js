@@ -11,8 +11,16 @@ function escapeHtml(unsafe) {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
   return DOMPurify.sanitize(clean, { USE_PROFILES: { html: true } });
-
 }
+let currentFile = null
+async function getCurrentFile() {
+  const file = await replit.session.getActiveFile()
+  if(file !== null) {
+    currentFile = file
+  }
+  return Currentfile
+}
+getCurrentFile()
 
 let clickTimer = null;
 
@@ -28,6 +36,46 @@ function onCodeBlockMouseDown(e) {
     copyCodeBlock(codeBlock);
   }
 }
+
+function exportMessageHistory() {
+  const messageHistory = extractMessages();
+  const dataStr = JSON.stringify(messageHistory);
+  const dataBlob = new Blob([dataStr], {type: 'application/json'});
+  const url = URL.createObjectURL(dataBlob);
+  
+  const link = document.createElement('a');
+  link.download = 'messageHistory-GPT-Replit.json';
+  link.href = url;
+  link.click();
+}
+
+function importMessageHistory(event) {
+  const chatMessages = document.getElementById('chat-messages');
+  while (chatMessages.firstChild) {
+    chatMessages.removeChild(chatMessages.firstChild);
+  }
+  messageCounter = 1;
+  const file = event.target.files[0];
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    const messages = JSON.parse(event.target.result);
+    
+    messages.forEach(message => add_message({ type: message.role + '-msg', text: message.content }));
+  };
+  reader.readAsText(file);
+}
+
+document.getElementById('settings-btn').addEventListener('click', () => {
+  document.getElementById('settings-modal').style.display = 'block';
+});
+
+document.getElementById('export-messages-button').addEventListener('click', exportMessageHistory);
+
+document.getElementById('import-messages-button').addEventListener('click', () => {
+  document.getElementById('import-file').click();
+});
+
+document.getElementById('import-file').addEventListener('change', importMessageHistory);
 
 function copyCodeBlock(codeBlock) {
   const range = document.createRange();
@@ -57,7 +105,7 @@ function add_message(x, id=null) {
   }
 
   
-  messageDiv.innerHTML = marked.parse(x.text, { mangle: false, headerIds: false });
+  messageDiv.innerHTML = marked.parse((x.text), { mangle: false, headerIds: false });
 
   messageDiv.querySelectorAll('pre code').forEach((codeBlock) => {
     codeBlock.style.cursor = 'pointer';
@@ -76,7 +124,7 @@ function clearMessages() {
   while (chatMessages.firstChild) {
     chatMessages.removeChild(chatMessages.firstChild);
   }
-  // Reset the messageCounter
+
   messageCounter = 1;
   replit.messages.showConfirm("Cleared message history successfully!", 1500);
 }
@@ -174,7 +222,7 @@ async function getResp() {
   submit.disabled = true;
   stopButton.disabled = false;
   const file = await replit.me.filePath();
-  const currentfile = await replit.session.getActiveFile()
+  
   const promptText = document.getElementById("user-message").value;
   messageCounter++;
   const messageId = messageCounter;
@@ -183,7 +231,6 @@ async function getResp() {
   const apiKey = document.getElementById("KEY").value;
   const history = extractMessages();
 
-  // Add file content to history if available
   if (file) {
     let filecontent = await replit.fs.readFile(file, "utf8");
     if (filecontent.error) {
@@ -194,14 +241,14 @@ async function getResp() {
       content: `You are a helpful programming assistent called Replit-GPT. The user might ask something related to the contents of the file they opened you in (${file}). Here is the content:\n${filecontent.content.substring(0, maxContent)}`
     };
     history.splice(1, 0, newObj);
-  } else if (currentfile) {
-    let filecontent = await replit.fs.readFile(currentfile, "utf8");
+  } else if (getCurrentFile()) {
+    let filecontent = await replit.fs.readFile(getCurrentFile(),);
     if (filecontent.error) {
       await replit.messages.showError("Error reading file: "+filecontent.error, 3000);
     }
     let newObj = {
       role: "system",
-      content: `You are a helpful programming assistent called Replit-GPT. The user might ask something related to the contents of the file they opened you in (${currentfile}). Here is the content:\n${filecontent.content.substring(0, maxContent)}`
+      content: `You are a helpful programming assistent called Replit-GPT. The user might ask something related to the contents of the file they opened recently (${getCurrentFile()}). Here is the content:\n${filecontent.content.substring(0, 4000)}`
     };
     history.splice(1, 0, newObj);
   }
@@ -298,7 +345,6 @@ function extractMessages() {
 }
 
 
-
 submit.addEventListener("click", getResp);
 var input = document.getElementById("user-message");
 
@@ -312,14 +358,15 @@ stopButton.addEventListener("click", () => {
   stopAI = true;
 });
 
-// Doesn't really work
+
 const passwordInput = document.getElementById('KEY');
-const savedPassword = localStorage.getItem('OPENAI-API-KEY_GPT-REPLIT|V1.4');
+const savedPassword = localStorage.getItem('OPENAI-API-KEY_GPT-REPLIT|V1.5');
 if (savedPassword) {
   passwordInput.value = savedPassword;
+  replit.messages.showNotice("Loaded OpenAI API Key from previous session.", 2000)
 }
-passwordInput.addEventListener('input', () => {
-  localStorage.setItem('password', passwordInput.value);
+passwordInput.addEventListener('change', () => {
+  localStorage.setItem('OPENAI-API-KEY_GPT-REPLIT|V1.5', passwordInput.value);
 });
 
 function updateInputMaxLength() {
@@ -338,6 +385,72 @@ function updateInputMaxLength() {
   }
 }
 
+async function showSettings() {
+  const file = await replit.fs.readFile("settings.gptreplit")
+  if(!file.error) {
+    document.getElementById("settings-btn").hidden = false
+    await replit.messages.showNotice("Additional settings for GPT-Replit activated!",1500)
+  }
+  else {
+    document.getElementById("settings-btn").hidden = true
+  }
+}
+showSettings()
+
+function updateSettingsInputFields(settings) {
+  if (settings) {
+    document.getElementById('temperature').value = settings.temp || '';
+    document.getElementById('model').value = settings.model || '';
+  }
+}
+var modal = document.getElementById('settings-modal');
+
+var span = document.getElementsByClassName("close")[0];
+
+window.onclick = function(event) {
+  if (event.target == modal) {
+    modal.style.display = "none";
+  }
+}
+
+span.onclick = function() {
+  modal.style.display = "none";
+}
+document.getElementById('settings-btn').addEventListener('click', async () => {
+  const settings = await parseSettingsFile();
+  if (settings) {
+      document.getElementById('temperature').value = settings.temp || '';
+      document.getElementById('model').value = settings.model || '';
+  }
+  document.getElementById('settings-modal').style.display = 'block';
+});
+
+document.getElementById('save-settings-button').addEventListener('click', async () => {
+  const settings = {
+    temp: document.getElementById('temperature').value,
+    model: document.getElementById('model').value,
+  };
+  const settingsStr = Object.entries(settings).map(([key, value]) => `${key}:${value}`).join('\n');
+
+  navigator.clipboard.writeText(settingsStr).then(function() {
+    console.log('Copying to clipboard was successful!');
+    alert("New settings have been copied to your clipboard. Please paste them into the settings.gptreplit file.\nThe extension can't do it due permissions.");
+    modal.style.display = "none";
+  }, function(err) {
+    console.error('Could not copy text: ', err);
+  });
+});
+
+window.addEventListener('load', async () => {
+  const settings = await parseSettingsFile();
+  updateSettingsInputFields(settings);
+});
+
+document.getElementById('settings-btn').addEventListener('click', async () => {
+  const settings = await parseSettingsFile();
+  updateSettingsInputFields(settings);
+  document.getElementById('settings-modal').style.display = 'block';
+});
 
 const modeSelector = document.getElementById("mode");
 modeSelector.addEventListener("change", updateInputMaxLength);
