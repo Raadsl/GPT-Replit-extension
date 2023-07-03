@@ -262,7 +262,7 @@ async function getResp() {
     history.splice(0, 0, newObj);
   }
 
-  } 
+  
   const mode = await getSelectedMode();
   const settings = await parseSettingsFile();
   const customTemperature = settings && settings.temperature ? parseFloat(settings.temperature) : 0.7;
@@ -366,13 +366,13 @@ stopButton.addEventListener("click", () => {
 
 
 const passwordInput = document.getElementById('KEY');
-const savedPassword = localStorage.getItem('OPENAI-API-KEY_GPT-REPLIT|V1.5');
+const savedPassword = localStorage.getItem('OPENAI-API-KEY_GPT-REPLIT|V1.5.1');
 if (savedPassword && passwordInput.value != null) {
   passwordInput.value = savedPassword;
   replit.messages.showNotice("Loaded OpenAI API Key from previous session.", 2000)
 }
 passwordInput.addEventListener('change', () => {
-  localStorage.setItem('OPENAI-API-KEY_GPT-REPLIT|V1.5', passwordInput.value);
+  localStorage.setItem('OPENAI-API-KEY_GPT-REPLIT|V1.5.1', passwordInput.value);
 });
 
 async function updateInputMaxLength() {
