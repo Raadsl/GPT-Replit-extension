@@ -181,19 +181,28 @@ let messageCounter = 1;
 
 
 async function fetchAssistantResponse(apiKey, mode, history, temperature) {
-  return await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + apiKey
-    },
-    body: JSON.stringify({
-    'model': mode,
-    'messages': history,
-    'temperature': parseFloat(temperature), 
-    'stream': true
-  })
-  });
+  try {
+    let response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + apiKey
+      },
+      body: JSON.stringify({
+        'model': mode,
+        'messages': history,
+        'temperature': parseFloat(temperature), 
+        'stream': true
+      })
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    } else {
+      return response;
+    }
+  } catch(error) {
+    console.log('There was a problem with the fetch operation: ' + error.message);
+  }
 }
 async function parseSettingsFile() {
   try {
@@ -352,7 +361,6 @@ function extractMessages() {
     messageObject.content = messageElement.textContent;
     messageHistory.push(messageObject);
   }
-
   return messageHistory;
 }
 
@@ -372,13 +380,14 @@ stopButton.addEventListener("click", () => {
 
 
 const passwordInput = document.getElementById('KEY');
-const savedPassword = localStorage.getItem('OPENAI-API-KEY_GPT-REPLIT|V1.5.1');
+const savedPassword = localStorage.getItem('OPENAI-API-KEY_GPT-REPLIT|V1.5.2');
+
 if (savedPassword && passwordInput.value != null) {
   passwordInput.value = savedPassword;
   replit.messages.showNotice("Loaded OpenAI API Key from previous session.", 2000)
 }
 passwordInput.addEventListener('change', () => {
-  localStorage.setItem('OPENAI-API-KEY_GPT-REPLIT|V1.5.1', passwordInput.value);
+  localStorage.setItem('OPENAI-API-KEY_GPT-REPLIT|V1.5.2', passwordInput.value);
 });
 
 async function updateInputMaxLength() {
@@ -402,7 +411,6 @@ async function updateInputMaxLength() {
 
 function loadPreviousMode() {
   const previousMode = localStorage.getItem('selectedMode');
-  console.log(previousMode)
   if(previousMode){
       modeSelector.value = previousMode;
   }

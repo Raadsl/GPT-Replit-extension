@@ -9,4 +9,7 @@ It uses the current Replit theme you use, and you can use your voice! Also doubl
 ## Additional Settings
 The `settings.gptreplit` file is an optional configuration file for the Replit-GPT API calls. To edit the settings you can create the `settings.gptreplit` file. Then a settings button will show up, there you can edit the temperature, import & export chats and change the model to something that isn't in the dropdown (e.g. `gpt-3.5-turbo-16k`). You'll have to paste the settings in the file yourself since I don't want to add the write file permission just for this feature.
 
-V1.5
+## Preview:
+![Preview](/cover.png)
+
+V1.5.2
