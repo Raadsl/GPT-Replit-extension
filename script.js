@@ -104,9 +104,11 @@ function add_message(x, id=null) {
     chatMessages.appendChild(messageDiv);
   }
 
-  
-  messageDiv.innerHTML = DOMPurify.sanitize(marked.parse((x.text), { mangle: false, headerIds: false }), { USE_PROFILES: { html: true } });
-
+  if(!x.noMD) {
+    messageDiv.innerHTML = DOMPurify.sanitize(marked.parse((x.text), { mangle: false, headerIds: false }), { USE_PROFILES: { html: true } });
+  } else {
+    messageDiv.innerHTML = DOMPurify.sanitize(x.text, { USE_PROFILES: { html: true } });
+  }
   messageDiv.querySelectorAll('pre code').forEach((codeBlock) => {
     codeBlock.style.cursor = 'pointer';
     codeBlock.title = 'Double-click to copy';
@@ -234,7 +236,7 @@ async function getResp() {
   const promptText = document.getElementById("user-message").value;
   messageCounter++;
   const messageId = messageCounter;
-  add_message({ type: 'user-msg', text: escapeHtml(promptText) }, messageId);
+  add_message({ type: 'user-msg', text: escapeHtml(promptText), noMD: true }, messageId);
   document.getElementById("user-message").value = "";
   const apiKey = document.getElementById("KEY").value;
   const history = extractMessages();
