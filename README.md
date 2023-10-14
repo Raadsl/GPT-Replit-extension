@@ -12,4 +12,4 @@ The `settings.gptreplit` file is an optional configuration file for the Replit-G
 ## Preview:
 ![Preview](/cover.png)
 
-V1.5.2
+V1.5.3

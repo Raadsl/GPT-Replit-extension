@@ -34,8 +34,26 @@ function onCodeBlockMouseDown(e) {
     clearTimeout(clickTimer);
     clickTimer = null;
     copyCodeBlock(codeBlock);
+    unselectCodeBlockText(codeBlock)
   }
 }
+
+function unselectCodeBlockText(codeBlock) {
+  if (window.getSelection) { // other browsers
+    let selection = window.getSelection();
+    let range = document.createRange();
+    range.selectNodeContents(codeBlock);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    selection.removeAllRanges(); // remove the range from selection
+  } else if (document.selection) { // IE
+    let range = document.body.createTextRange();
+    range.moveToElementText(codeBlock);
+    range.select();
+    document.selection.empty(); // remove selection
+  }
+}
+
 
 function exportMessageHistory() {
   const messageHistory = extractMessages();
@@ -85,6 +103,18 @@ function copyCodeBlock(codeBlock) {
   document.execCommand('copy');
   window.getSelection().removeAllRanges();
   replit.messages.showConfirm('Code block copied!', 1500);
+  confetti({
+    particleCount: 30,
+    angle: 180,
+    spread: 55,
+    origin: { y: (event.clientY / window.innerHeight), x: (event.clientX / window.innerWidth) } 
+  })
+  confetti({
+    particleCount: 30,
+    angle: 0,
+    spread: 55,
+    origin: { y: (event.clientY / window.innerHeight), x: (event.clientX / window.innerWidth) } 
+  })
 }
 
 
@@ -109,16 +139,30 @@ function add_message(x, id=null) {
   } else {
     messageDiv.innerHTML = DOMPurify.sanitize(x.text, { USE_PROFILES: { html: true } });
   }
-  messageDiv.querySelectorAll('pre code').forEach((codeBlock) => {
-    codeBlock.style.cursor = 'pointer';
+ const codeBlocks = messageDiv.querySelectorAll('pre code');
+  codeBlocks.forEach((codeBlock, index) => {
+    //codeBlock.style.cursor = 'pointer';
     codeBlock.title = 'Double-click to copy';
     codeBlock.addEventListener('mousedown', onCodeBlockMouseDown);
+
+    if (index === 0) {
+      const footer = document.createElement('div');
+      footer.innerText = 'Double-click to copy';
+      footer.style.fontSize = '0.8em';
+      footer.style.textAlign = 'right';
+      codeBlock.parentNode.appendChild(footer);
+    }
   });
   // Scroll to the bottom of the chat-messages div
   if (isNearBottom) {
     chatMessages.scrollTop = chatMessages.scrollHeight;
   }
   hljs.highlightAll();
+}
+
+function playWoosh() {
+  var audio = new Audio('/woosh.mp3');
+  audio.play();
 }
 
 function clearMessages() {
@@ -255,7 +299,6 @@ async function getResp() {
   } else if (await getCurrentFile() != null) {
     try {
       let filecontent = await replit.fs.readFile(await getCurrentFile());
-      console.log(filecontent)
       if (filecontent.error) {
         await replit.messages.showError("Error reading file: "+filecontent.error, 3000);
         let newObj = { role: "system", content: `You are a helpful programming assistent called Replit-GPT.` };
@@ -266,7 +309,6 @@ async function getResp() {
         role: "system",
         content: `You are a helpful programming assistent called Replit-GPT. The user might ask something related to the contents of the file they opened most recently (${await getCurrentFile()}). Here is the first 4k characters of the content of '${await getCurrentFile()}':\n${filecontent.content.substring(0, 4000)}`
       };
-      console.log(newObj)
       history.splice(1, 0, newObj);
       }
     } catch(err) {
@@ -292,7 +334,7 @@ async function getResp() {
     }
     await processResponse(response, messageId);
   } catch (error) {
-    console.error('Error fetching response:', error.message);
+    console.log(`Error fetching response: ${error}`);
     
     messageCounter++;
     add_message({ type: 'error-msg', text: `Error fetching response, ${error.message} , ${mode}` }, messageCounter);
@@ -306,10 +348,13 @@ async function processResponse(response, messageId) {
   let resp = '';
   let chunks = '';
   messageCounter++;
+  if(voice) {
+    playWoosh()
+  }
   while (true) {
     // Check if stopAI flag is set to true
     if (stopAI) {
-      stopAI = false; // Reset the stopAI flag
+      stopAI = false;
       stopButton.disabled = true;
       replit.messages.showWarning("Stopped generating!", 1000)
       break;
@@ -320,7 +365,6 @@ async function processResponse(response, messageId) {
       break;
     }
     chunks = new TextDecoder().decode(value);
-
     if (chunks.includes('data: [DONE]')) {
       break;
     }
@@ -380,16 +424,15 @@ stopButton.addEventListener("click", () => {
   stopAI = true;
 });
 
-
 const passwordInput = document.getElementById('KEY');
-const savedPassword = localStorage.getItem('OPENAI-API-KEY_GPT-REPLIT|V1.5.2');
+const savedPassword = localStorage.getItem('OPENAI-API-KEY_GPT-REPLIT|V1.5.3') || localStorage.getItem('OPENAI-API-KEY_GPT-REPLIT|V1.5.2');
 
 if (savedPassword && passwordInput.value != null) {
   passwordInput.value = savedPassword;
   replit.messages.showNotice("Loaded OpenAI API Key from previous session.", 2000)
 }
 passwordInput.addEventListener('change', () => {
-  localStorage.setItem('OPENAI-API-KEY_GPT-REPLIT|V1.5.2', passwordInput.value);
+  localStorage.setItem('OPENAI-API-KEY_GPT-REPLIT|V1.5.3', passwordInput.value);
 });
 
 async function updateInputMaxLength() {
@@ -468,6 +511,7 @@ document.getElementById('save-settings-button').addEventListener('click', async 
 
   navigator.clipboard.writeText(settingsStr).then(function() {
     console.log('Copying to clipboard was successful!');
+    replit.nessages.showConfirm("Settings saved to clipboard.", 3000)
     alert("New settings have been copied to your clipboard. Please paste them into the settings.gptreplit file.\nThe extension can't do it due permissions.");
     modal.style.display = "none";
   }, function(err) {
@@ -475,10 +519,6 @@ document.getElementById('save-settings-button').addEventListener('click', async 
   });
 });
 
-window.addEventListener('load', async () => {
-  const settings = await parseSettingsFile();
-  updateSettingsInputFields(settings);
-});
 
 document.getElementById('settings-btn').addEventListener('click', async () => {
   const settings = await parseSettingsFile();
@@ -488,4 +528,5 @@ document.getElementById('settings-btn').addEventListener('click', async () => {
 
 const modeSelector = document.getElementById("mode");
 modeSelector.addEventListener("change", updateInputMaxLength);
+
 loadPreviousMode()

@@ -137,51 +137,97 @@ header {
   color: var(--foreground-default, white);
 }
 
-
-pre {
-  background-color: #f4f4f4;
-  border: 1px solid #ddd;
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 16px;
-  line-height: 1.5;
-  padding: 10px;
-}
-
-
 code {
-  color: #dfc8c8;
-  font-family: Consolas, Menlo, Monaco, source-code-pro, Courier New, monospace;
-  font-size: 14px;
-  line-height: 1.5;
-  padding: 2px 4px;
+  font-family: 'IBM Plex Mono', sans-serif;
+  font-size: 16px;
+  color: var(--foreground-dimmer);
+  padding: 4px;
+  border-radius: 8px;
   white-space: pre-wrap;
+  overflow-x: auto;
 }
 
+.hljs{display:block;overflow-x:auto;padding:.5em}.hljs-keyword,.hljs-operator{color:#f92672}.hljs-pattern-match{color:#f92672}.hljs-pattern-match .hljs-constructor{color:#61aeee}.hljs-function{color:#61aeee}.hljs-function .hljs-params{color:#a6e22e}.hljs-function .hljs-params .hljs-typing{color:#fd971f}.hljs-module-access .hljs-module{color:#7e57c2}.hljs-constructor{color:#e2b93d}.hljs-constructor .hljs-string{color:#9ccc65}.hljs-comment,.hljs-quote{color:#b18eb1;font-style:italic}.hljs-doctag,.hljs-formula{color:#c678dd}.hljs-deletion,.hljs-name,.hljs-section,.hljs-selector-tag,.hljs-subst{color:#66b0ff}.hljs-literal{color:#56b6c2}.hljs-addition,.hljs-attribute,.hljs-meta-string,.hljs-regexp,.hljs-string{color:#e55d5d}.hljs-built_in,.hljs-class .hljs-title{color:#e6c07b}.hljs-attr,.hljs-number,.hljs-selector-attr,.hljs-selector-class,.hljs-selector-pseudo,.hljs-template-variable,.hljs-type,.hljs-variable{color:#a3d0ff}.hljs-bullet,.hljs-link,.hljs-meta,.hljs-selector-id,.hljs-symbol,.hljs-title{color:#61aeee}.hljs-emphasis{font-style:italic}.hljs-strong{font-weight:700}.hljs-link{text-decoration:underline} /*code highlighting*/
 
+@keyframes slideInFromRight {
+  0% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInFromLeft {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
 .user-msg {
+  position: relative;
   background: var(--accent-blurple-dimmer, #0077ff);
   color: var(--foreground-default, white);
   margin-left: auto;
   white-space: pre-wrap;
   word-wrap: break-word;
-  border-radius: 20px 20px 0px 20px;
+  border-radius: 20px 0px 20px 20px;
+  animation: slideInFromRight 0.3s;
 }
 
+.user-msg:after {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 0;
+  border-top: 10px solid var(--accent-blurple-dimmer, #0077ff);
+  border-right: 10px solid transparent;
+  border-left: 0;
+  border-bottom: 0;
+  right: -10px;
+  top: 0;
+}
 
 .received-msg {
+  position: relative;
   background: var(--accent-grey-dimmer, #444);
   color: var(--foreground-default, white);
   white-space: pre-wrap;
   word-wrap: break-word;
-  border-radius: 20px 20px 20px 0px;
+  border-radius: 0px 20px 20px 20px;
+  animation: slideInFromLeft 0.2s;
 }
 
+.received-msg:after {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 0;
+  border-top: 10px solid var(--accent-grey-dimmer, #444);
+  border-left: 10px solid transparent;
+  border-right: 0;
+  border-bottom: 0;
+  left: -10px;
+  top: 0;
+}
 
 .error-msg, system-msg {
   background: var(--accent-red-stronger, #d21e1e);
   color: var(--foreground-default, white);
   white-space: pre-wrap;
   word-wrap: break-word;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 98%;
+  margin-bottom: 10px;
+  animation: slideInFromRight 0.5s;
 }
 
 
@@ -289,6 +335,14 @@ a::before{
 }
 
 /*LOADING BAR */
+#loading-screen {
+  transition: opacity 0.4s ease-in-out;
+}
+
+#main-content {
+  opacity: 0;
+  transition: opacity 0.4s ease-in-out;
+}
 .ring
 {
   position:absolute;
@@ -463,3 +517,17 @@ input[type="text"]:focus, input[type="number"]:focus, textarea:focus {
   border-color: var(--accent-primary-default, #0077ff);
   outline: none;
 }
+
+code .badge-red {
+  background-color: var(--accent-red-dimmer);
+  color: var(--accent-red-strongest);
+  width: fit-content;
+  font-size: 0.7em;
+  padding: 2px 7px;
+  margin-left: 8px;
+  bottom: 0;
+  right: 0;
+  border-radius: 20px;
+  font-weight: 600;
+}
+

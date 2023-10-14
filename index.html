@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.3.1/styles/default.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.3.1/highlight.min.js"></script>
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
-
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.0/dist/confetti.browser.min.js"></script>
   <script src="script.js" defer></script>    
   <script type='module'>
     try {
@@ -19,7 +19,6 @@
       await replit.init({ permissions: []})
       async function updateTheme() {
         await replit.themes.getCurrentTheme().then(theme => {
-            console.log(theme)
             for (const value in theme.values.global) {
                 
                 if (!value.startsWith('_')) {
@@ -92,10 +91,14 @@
     }
     const loadingScreen = document.getElementById('loading-screen');
     const mainContent = document.getElementById('main-content');
-    
-    mainContent.style.display = 'block';
-    loadingScreen.style.display = 'none';
-  console.log("[Replit-GPT] loaded! V1.5.2")
+    const settings = await parseSettingsFile();
+    updateSettingsInputFields(settings);
+    mainContent.style.opacity = '1';
+    loadingScreen.style.opacity = '0';
+    setTimeout(function() {
+      loadingScreen.style.display = 'none';
+    }, 400);
+  console.log("[Replit-GPT] loaded! V1.5.3")
   </script>
   
 </head>
@@ -103,10 +106,11 @@
   <div id="loading-screen">
     <div title="We're initializing the extension" class="ring">Loading
       <circlespan></circlespan>
+      <p>Initialising</p>
     </div>
   </div>
   
-  <div id="main-content" style="display:none;">
+  <div id="main-content" style="opacity:0;">
   
   <header>Replit-GPT</header>
   
@@ -120,7 +124,7 @@
       <button title='Sends the message' id="send-button"> Send </button>
     </div>
     <div class="user-input-container">
-      <input type="password" id="KEY" placeholder="Enter your openAI API key." title="We won't store this ourself. If you don't believe me look at the source code. No requests are made except to openAI's server">
+      <input type="password" id="KEY" placeholder="Enter your openAI API key." title="No requests are made using your key except to openAI's servers. It's also only stored local.">
       <button title='Clears the message history' id="clear-messages-button">Clear</button>
 
       <button title="activates voice mode" id="voice-input-button">🎤</button>
