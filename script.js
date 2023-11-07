@@ -2,6 +2,7 @@ const submit = document.getElementById("send-button")
 const stopButton = document.getElementById("stop-button");
 let maxContent = 4000 * 2
 let stopAI = false;
+let isGenerating = false;
 let voice = false;
 function escapeHtml(unsafe) {
   let clean = unsafe
@@ -78,7 +79,13 @@ function importMessageHistory(event) {
   reader.onload = (event) => {
     const messages = JSON.parse(event.target.result);
     
-    messages.forEach(message => add_message({ type: message.role + '-msg', text: message.content }));
+    messages.forEach(message => {
+      if (message.role === "assistant") {
+        add_message({ type: "received-msg", text: message.content });
+      } else {
+        add_message({ type: message.role + "-msg", text: message.content });
+      }
+    });  
   };
   reader.readAsText(file);
 }
@@ -166,6 +173,11 @@ function playWoosh() {
 }
 
 function clearMessages() {
+  if (isGenerating) {
+    replit.messages.showWarning("Cannot clear messages while generating a response!", 2000);
+    return;
+  }
+
   const chatMessages = document.getElementById('chat-messages');
   while (chatMessages.firstChild) {
     chatMessages.removeChild(chatMessages.firstChild);
@@ -191,13 +203,6 @@ function startVoiceInput() {
   };
 
   recognition.start();
-}
-
-function speak(text) {
-  const synth = window.speechSynthesis;
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = 'en-US';
-  synth.speak(utterance);
 }
 
 // Check if the browser supports SpeechRecognition
@@ -242,12 +247,14 @@ async function fetchAssistantResponse(apiKey, mode, history, temperature) {
       })
     });
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    } else {
-      return response;
+      console.log(`HTTP error! status: ${response.status}`)
     }
+    return response;
+
   } catch(error) {
     console.log('There was a problem with the fetch operation: ' + error.message);
+    console.log(error)
+    isGenerating = false
   }
 }
 async function parseSettingsFile() {
@@ -276,6 +283,8 @@ async function parseSettingsFile() {
 async function getResp() {
   submit.disabled = true;
   stopButton.disabled = false;
+  stopAI = false
+  isGenerating = true
   const file = await replit.me.filePath();
   const promptText = document.getElementById("user-message").value;
   messageCounter++;
@@ -313,7 +322,7 @@ async function getResp() {
       }
     } catch(err) {
       console.log(err)
-      
+      isGenerating = false
     }
   }
   else {
@@ -328,6 +337,7 @@ async function getResp() {
 
   try {
    const response = await fetchAssistantResponse(apiKey, mode, history, customTemperature);
+    console.log(response)
     if (response.status !== 200) {
       const errorResponse = await response.json();
       throw new Error(errorResponse.error.message);
@@ -335,9 +345,9 @@ async function getResp() {
     await processResponse(response, messageId);
   } catch (error) {
     console.log(`Error fetching response: ${error}`);
-    
+    isGenerating = false
     messageCounter++;
-    add_message({ type: 'error-msg', text: `Error fetching response, ${error.message} , ${mode}` }, messageCounter);
+    add_message({ type: 'error-msg', text: `Error fetching response, ${error.message}` }, messageCounter);
   }
   submit.disabled = false;
   stopButton.disabled = true;
@@ -347,6 +357,7 @@ async function processResponse(response, messageId) {
   const reader = response.body.getReader();
   let resp = '';
   let chunks = '';
+  const synth = window.speechSynthesis;
   messageCounter++;
   if(voice) {
     playWoosh()
@@ -355,6 +366,7 @@ async function processResponse(response, messageId) {
     // Check if stopAI flag is set to true
     if (stopAI) {
       stopAI = false;
+      isGenerating = false
       stopButton.disabled = true;
       replit.messages.showWarning("Stopped generating!", 1000)
       break;
@@ -384,9 +396,7 @@ async function processResponse(response, messageId) {
       }
     }
   }
-  if (voice) {
-    speak(resp);
-  }
+  isGenerating = false;
 }
 
 function extractMessages() {
@@ -425,30 +435,36 @@ stopButton.addEventListener("click", () => {
 });
 
 const passwordInput = document.getElementById('KEY');
-const savedPassword = localStorage.getItem('OPENAI-API-KEY_GPT-REPLIT|V1.5.3') || localStorage.getItem('OPENAI-API-KEY_GPT-REPLIT|V1.5.2');
+const savedPassword = localStorage.getItem('OPENAI-API-KEY_GPT-REPLIT|V1.5.3') || localStorage.getItem('OPENAI-API-KEY_GPT-REPLIT') || localStorage.getItem('OPENAI-API-KEY_GPT-REPLIT|V1.5.2');
+localStorage.setItem('OPENAI-API-KEY_GPT-REPLIT', savedPassword);
 
 if (savedPassword && passwordInput.value != null) {
   passwordInput.value = savedPassword;
   replit.messages.showNotice("Loaded OpenAI API Key from previous session.", 2000)
 }
 passwordInput.addEventListener('change', () => {
-  localStorage.setItem('OPENAI-API-KEY_GPT-REPLIT|V1.5.3', passwordInput.value);
+  localStorage.setItem('OPENAI-API-KEY_GPT-REPLIT', passwordInput.value);
 });
 
 async function updateInputMaxLength() {
   const userMessageInput = document.getElementById("user-message");
   const selectedMode = await getSelectedMode();
   if (selectedMode === "gpt-3.5-turbo") {
-    userMessageInput.maxLength = 4000 * 3;
-    maxContent = 4000 * 3
+    userMessageInput.maxLength = 15000 * 3;
+    maxContent = 15000 * 3
     localStorage.setItem('selectedMode', selectedMode);
   } else if (selectedMode === "gpt-4") {
-    userMessageInput.maxLength = 8000 * 3;
-    maxContent = 32000 * 3
+    userMessageInput.maxLength = 7500 * 3;
+    maxContent = 7500 * 3
     localStorage.setItem('selectedMode', selectedMode);
   } else if (selectedMode === "gpt-4-32k") {
-    userMessageInput.maxLength = 32000 * 3;
-    maxContent = 32000 * 3
+    userMessageInput.maxLength = 31500 * 3;
+    maxContent = 27000 * 3
+    localStorage.setItem('selectedMode', selectedMode);
+  }
+   else if (selectedMode === "gpt-4-1106-preview") {
+    userMessageInput.maxLength = 125000 * 3;
+    maxContent = 125000 * 3
     localStorage.setItem('selectedMode', selectedMode);
   }
   

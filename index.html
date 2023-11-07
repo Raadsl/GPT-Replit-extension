@@ -46,8 +46,8 @@
       const file = await replit.me.filePath();
       if (file) {
         add_message({ type: 'received-msg', text: `Hi there, how can I help you? You can ask questions about the ${file} file` },1);
-        await replit.messages.showConfirm("Replit-GPT loaded", 2001);
-        await replit.messages.showNotice("The content of the file will be passed to the AI to improve performance!", 2200);
+        await replit.messages.showConfirm("Replit-GPT loaded", 1500);
+        await replit.messages.showNotice("The content of the file will be passed to the AI to improve performance!", 2000);
 
         //add api key
         const output = await replit.fs.readFile("./.env")
@@ -67,7 +67,7 @@
         }
       } else {
           add_message({ type: 'received-msg', text: 'Hi there, how can I help you?' },1);
-          await replit.messages.showConfirm("Replit-GPT loaded", 2000);
+          await replit.messages.showConfirm("Replit-GPT loaded", 1500);
           // add api key
           const output = await replit.fs.readFile("./.env")
         if(output.content !== null) {
@@ -119,7 +119,7 @@
       <!-- Chat messages will go here -->
     </div>
     <div class="user-input-container">
-      <textarea title="Enter your message here" type="text" rows="1" id="user-message" placeholder="Type your message..."></textarea>
+      <textarea title="Enter your message here" type="text" rows="1" id="user-message" placeholder="Type your message..." contenteditable="true"></textarea>
       <button id="settings-btn" hidden>Settings</button>
       <button title='Sends the message' id="send-button"> Send </button>
     </div>
@@ -132,6 +132,7 @@
         <option value='gpt-3.5-turbo' selected>GPT-3.5</option>
         <option value='gpt-4'>GPT-4</option>
         <option value='gpt-4-32k'>GPT-4 32K</option>
+        <option value='gpt-4-1106-preview'>GPT-4 Turbo</option>
       </select>
       <button title="Stops the AI from responding" id="stop-button" disabled>Stop</button>
     </div>
