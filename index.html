@@ -12,6 +12,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.3.1/highlight.min.js"></script>
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.0/dist/confetti.browser.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <script src="script.js" defer></script>    
   <script type='module'>
     try {
@@ -91,8 +92,6 @@
     }
     const loadingScreen = document.getElementById('loading-screen');
     const mainContent = document.getElementById('main-content');
-    const settings = await parseSettingsFile();
-    updateSettingsInputFields(settings);
     mainContent.style.opacity = '1';
     loadingScreen.style.opacity = '0';
     setTimeout(function() {
@@ -120,21 +119,21 @@
     </div>
     <div class="user-input-container">
       <textarea title="Enter your message here" type="text" rows="1" id="user-message" placeholder="Type your message..." contenteditable="true"></textarea>
-      <button id="settings-btn" hidden>Settings</button>
-      <button title='Sends the message' id="send-button"> Send </button>
+      
+      <button id="send-button" title='Sends the message'> <i class="fa-solid fa-arrow-up"></i> </button>
     </div>
     <div class="user-input-container">
       <input type="password" id="KEY" placeholder="Enter your openAI API key." title="No requests are made using your key except to openAI's servers. It's also only stored local.">
-      <button title='Clears the message history' id="clear-messages-button">Clear</button>
-
-      <button title="activates voice mode" id="voice-input-button">🎤</button>
-      <select title="select which GPT you want to use." id='mode'>
+      <button title='Clears the message history' id="clear-messages-button"><i class="fas fa-trash-alt"></i></button>
+      <button title="Opens the settings modal for extra customization" id="settings-btn"><i class="fa-solid fa-gear"></i></button>
+      <button title="activates voice mode" id="voice-input-button"><i class="fas fa-microphone"></i></button>
+      <select title="select which GPT model you want to use." id='mode'>
         <option value='gpt-3.5-turbo' selected>GPT-3.5</option>
         <option value='gpt-4'>GPT-4</option>
         <option value='gpt-4-32k'>GPT-4 32K</option>
         <option value='gpt-4-1106-preview'>GPT-4 Turbo</option>
       </select>
-      <button title="Stops the AI from responding" id="stop-button" disabled>Stop</button>
+      <button title="Stops the AI from responding" id="stop-button" disabled><i class="fas fa-stop"></i></button>
     </div>
   </div>
 </body>
@@ -145,12 +144,18 @@
     <button class='button' id="export-messages-button">Export Messages</button>
     <button class='button' id="import-messages-button">Import Messages</button>
     <input type="file" id="import-file" style="display: none;">
+    <hr>
+    <label class="checkbox-container">
+      Use custom variables
+      <input title='Use these custom variables in the cht instead of the basic UI' id='use' type="checkbox">
+      <span class="checkbox-mark"></span>
+    </label>
     <label for="temperature">Temperature:</label>
-    <input type="number" id="temperature">
+    <input type="number" id="temperature" placeholder="0.7..">
   
     <label for="model">Model:</label>
-    <input type="text" id="model">
-    <button class='button' id="save-settings-button">Copy Settings</button>
+    <input type="text" id="model" placeholder="gpt-...">
+    <button class='button' id="save-settings-button">Save</button>
   </div>
 </div>
 </html>

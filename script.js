@@ -4,6 +4,7 @@ let maxContent = 4000 * 2
 let stopAI = false;
 let isGenerating = false;
 let voice = false;
+let lastID = {}
 function escapeHtml(unsafe) {
   let clean = unsafe
     .replace(/&/g, "&amp;")
@@ -25,7 +26,7 @@ getCurrentFile()
 
 let clickTimer = null;
 
-function onCodeBlockMouseDown(e) {
+async function onCodeBlockMouseDown(e) {
   const codeBlock = e.target;
   if (clickTimer === null) {
     clickTimer = setTimeout(() => {
@@ -34,7 +35,7 @@ function onCodeBlockMouseDown(e) {
   } else {
     clearTimeout(clickTimer);
     clickTimer = null;
-    copyCodeBlock(codeBlock);
+    await copyCodeBlock(codeBlock);
     unselectCodeBlockText(codeBlock)
   }
 }
@@ -54,7 +55,6 @@ function unselectCodeBlockText(codeBlock) {
     document.selection.empty(); // remove selection
   }
 }
-
 
 function exportMessageHistory() {
   const messageHistory = extractMessages();
@@ -102,14 +102,17 @@ document.getElementById('import-messages-button').addEventListener('click', () =
 
 document.getElementById('import-file').addEventListener('change', importMessageHistory);
 
-function copyCodeBlock(codeBlock) {
+async function copyCodeBlock(codeBlock) {
   const range = document.createRange();
   range.selectNodeContents(codeBlock);
   window.getSelection().removeAllRanges();
   window.getSelection().addRange(range);
   document.execCommand('copy');
   window.getSelection().removeAllRanges();
-  replit.messages.showConfirm('Code block copied!', 1500);
+  if (lastID.copy) {
+    await replit.messages.hideMessage(lastID.copy)
+  }
+  lastID.copy = await replit.messages.showConfirm('Code block copied!', 1500);
   confetti({
     particleCount: 30,
     angle: 180,
@@ -123,7 +126,6 @@ function copyCodeBlock(codeBlock) {
     origin: { y: (event.clientY / window.innerHeight), x: (event.clientX / window.innerWidth) } 
   })
 }
-
 
 function add_message(x, id=null) {
   const chatMessages = document.getElementById('chat-messages');
@@ -148,7 +150,6 @@ function add_message(x, id=null) {
   }
  const codeBlocks = messageDiv.querySelectorAll('pre code');
   codeBlocks.forEach((codeBlock, index) => {
-    //codeBlock.style.cursor = 'pointer';
     codeBlock.title = 'Double-click to copy';
     codeBlock.addEventListener('mousedown', onCodeBlockMouseDown);
 
@@ -172,7 +173,7 @@ function playWoosh() {
   audio.play();
 }
 
-function clearMessages() {
+async function clearMessages() {
   if (isGenerating) {
     replit.messages.showWarning("Cannot clear messages while generating a response!", 2000);
     return;
@@ -184,7 +185,10 @@ function clearMessages() {
   }
 
   messageCounter = 1;
-  replit.messages.showConfirm("Cleared message history successfully!", 1500);
+  if(lastID.clear) {
+    await replit.messages.hideMessage(lastID.clear)
+  }
+  lastID.clear = await replit.messages.showConfirm("Cleared message history successfully!", 1500);
 }
 
 function startVoiceInput() {
@@ -218,7 +222,7 @@ const clearMessagesButton = document.getElementById('clear-messages-button');
 clearMessagesButton.addEventListener('click', clearMessages);
 
 async function getSelectedMode() {
-  const settings = await parseSettingsFile();
+  const settings = loadSettings();
   if (settings && settings.model) {
     return settings.model;
   } else {
@@ -229,7 +233,6 @@ async function getSelectedMode() {
 }
 
 let messageCounter = 1;
-
 
 async function fetchAssistantResponse(apiKey, mode, history, temperature) {
   try {
@@ -257,28 +260,6 @@ async function fetchAssistantResponse(apiKey, mode, history, temperature) {
     isGenerating = false
   }
 }
-async function parseSettingsFile() {
-  try {
-    const settingsContent = await replit.fs.readFile('settings.gptreplit', 'utf8');
-    
-    if (settingsContent.error) {
-      return null;
-    }
-    
-    const settingsLines = settingsContent.content.split('\n');
-    const settings = {};
-
-    for (const line of settingsLines) {
-      const [key, value] = line.split(':');
-      settings[key] = value;
-    }
-
-    return settings;
-  } catch (error) {
-    console.error('Error reading settings.gptreplit file:', error);
-    return null;
-  }
-}
 
 async function getResp() {
   submit.disabled = true;
@@ -287,6 +268,13 @@ async function getResp() {
   isGenerating = true
   const file = await replit.me.filePath();
   const promptText = document.getElementById("user-message").value;
+  if(promptText=="") {
+    submit.disabled = false;
+    stopButton.disabled = true;
+    stopAI = false
+    isGenerating = false
+    return
+  }
   messageCounter++;
   const messageId = messageCounter;
   add_message({ type: 'user-msg', text: escapeHtml(promptText), noMD: true }, messageId);
@@ -330,9 +318,8 @@ async function getResp() {
     history.splice(0, 0, newObj);
   }
 
-  
   const mode = await getSelectedMode();
-  const settings = await parseSettingsFile();
+  const settings = loadSettings();
   const customTemperature = settings && settings.temperature ? parseFloat(settings.temperature) : 0.7;
 
   try {
@@ -440,7 +427,7 @@ localStorage.setItem('OPENAI-API-KEY_GPT-REPLIT', savedPassword);
 
 if (savedPassword && passwordInput.value != null) {
   passwordInput.value = savedPassword;
-  replit.messages.showNotice("Loaded OpenAI API Key from previous session.", 2000)
+  replit.messages.showNotice("Loaded OpenAI API Key from previous session.", 1000)
 }
 passwordInput.addEventListener('change', () => {
   localStorage.setItem('OPENAI-API-KEY_GPT-REPLIT', passwordInput.value);
@@ -449,7 +436,7 @@ passwordInput.addEventListener('change', () => {
 async function updateInputMaxLength() {
   const userMessageInput = document.getElementById("user-message");
   const selectedMode = await getSelectedMode();
-  if (selectedMode === "gpt-3.5-turbo") {
+  if (selectedMode === "gpt-3.5-turbo") { // times 3 because of the token limit, not character limit
     userMessageInput.maxLength = 15000 * 3;
     maxContent = 15000 * 3
     localStorage.setItem('selectedMode', selectedMode);
@@ -467,7 +454,6 @@ async function updateInputMaxLength() {
     maxContent = 125000 * 3
     localStorage.setItem('selectedMode', selectedMode);
   }
-  
 }
 
 function loadPreviousMode() {
@@ -478,27 +464,26 @@ function loadPreviousMode() {
   updateInputMaxLength();
 }
 
-async function showSettings() {
-  const file = await replit.fs.readFile("settings.gptreplit")
-  if(!file.error) {
-    document.getElementById("settings-btn").hidden = false
-    await replit.messages.showNotice("Additional settings for GPT-Replit activated!",1500)
-  }
-  else {
-    document.getElementById("settings-btn").hidden = true
-  }
+// Save settings to localStorage
+function saveSettings(settings) {
+  localStorage.setItem('settings', JSON.stringify(settings));
 }
-showSettings()
 
-function updateSettingsInputFields(settings) {
-  if (settings) {
-    document.getElementById('temperature').value = settings.temp || '';
-    document.getElementById('model').value = settings.model || '';
+function loadSettings() {
+  const settings = localStorage.getItem('settings');
+  if (settings && JSON.parse(settings).used) {
+    return null;
   }
+  return settings ? JSON.parse(settings) : null;
 }
-var modal = document.getElementById('settings-modal');
 
-var span = document.getElementsByClassName("close")[0];
+function loadRawSettings() {
+  const settings = localStorage.getItem('settings');
+  return settings ? JSON.parse(settings) : null;
+}
+
+const modal = document.getElementById('settings-modal');
+const span = document.getElementsByClassName("close")[0];
 
 window.onclick = function(event) {
   if (event.target == modal) {
@@ -510,36 +495,25 @@ span.onclick = function() {
   modal.style.display = "none";
 }
 document.getElementById('settings-btn').addEventListener('click', async () => {
-  const settings = await parseSettingsFile();
+  const settings = loadRawSettings();
   if (settings) {
-      document.getElementById('temperature').value = settings.temp || '';
-      document.getElementById('model').value = settings.model || '';
+    document.getElementById('temperature').value = settings.temp || '0.7';
+    document.getElementById('model').value = settings.model || 'gpt-3.5-turbo';
   }
   document.getElementById('settings-modal').style.display = 'block';
 });
-
 document.getElementById('save-settings-button').addEventListener('click', async () => {
   const settings = {
+    used: document.getElementById('use').checked,
     temp: document.getElementById('temperature').value,
     model: document.getElementById('model').value,
   };
-  const settingsStr = Object.entries(settings).map(([key, value]) => `${key}:${value}`).join('\n');
-
-  navigator.clipboard.writeText(settingsStr).then(function() {
-    console.log('Copying to clipboard was successful!');
-    replit.nessages.showConfirm("Settings saved to clipboard.", 3000)
-    alert("New settings have been copied to your clipboard. Please paste them into the settings.gptreplit file.\nThe extension can't do it due permissions.");
-    modal.style.display = "none";
-  }, function(err) {
-    console.error('Could not copy text: ', err);
-  });
-});
-
-
-document.getElementById('settings-btn').addEventListener('click', async () => {
-  const settings = await parseSettingsFile();
-  updateSettingsInputFields(settings);
-  document.getElementById('settings-modal').style.display = 'block';
+  saveSettings(settings)
+  if(lastID.save) {
+    await replit.messages.hideMessage(lastID.save)
+  }
+  lastID.save = await replit.messages.showNotice("Saved custom settings", 1500)
+  modal.style.display = "none";
 });
 
 const modeSelector = document.getElementById("mode");
