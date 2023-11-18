@@ -223,6 +223,7 @@ clearMessagesButton.addEventListener('click', clearMessages);
 
 async function getSelectedMode() {
   const settings = loadSettings();
+  console.log(settings)
   if (settings && settings.model) {
     return settings.model;
   } else {
@@ -471,14 +472,16 @@ function saveSettings(settings) {
 
 function loadSettings() {
   const settings = localStorage.getItem('settings');
-  if (settings && JSON.parse(settings).used) {
-    return null;
+  const parsedSettings = settings ? JSON.parse(settings) : null;
+  if (parsedSettings && !parsedSettings.used) {
+    return {};
   }
-  return settings ? JSON.parse(settings) : null;
+  return parsedSettings;
 }
 
 function loadRawSettings() {
   const settings = localStorage.getItem('settings');
+  console.log(JSON.parse(settings))
   return settings ? JSON.parse(settings) : null;
 }
 
