@@ -445,9 +445,9 @@ circlespan:before {
 }
 
 .modal-content {
-  background-color: var(--background-default);
+  background-color: var(--background-default, #333);
   margin: 15% auto;
-  color: var(--foreground-default);
+  color: var(--foreground-default, #fff);
   padding: 20px;
   width: 80%;
   max-width: 500px;

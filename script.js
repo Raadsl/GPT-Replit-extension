@@ -109,10 +109,6 @@ async function copyCodeBlock(codeBlock) {
   window.getSelection().addRange(range);
   document.execCommand('copy');
   window.getSelection().removeAllRanges();
-  if (lastID.copy) {
-    await replit.messages.hideMessage(lastID.copy)
-  }
-  lastID.copy = await replit.messages.showConfirm('Code block copied!', 1500);
   confetti({
     particleCount: 30,
     angle: 180,
@@ -125,6 +121,10 @@ async function copyCodeBlock(codeBlock) {
     spread: 55,
     origin: { y: (event.clientY / window.innerHeight), x: (event.clientX / window.innerWidth) } 
   })
+  if (lastID.copy) {
+    await replit.messages.hideMessage(lastID.copy)
+  }
+  lastID.copy = await replit.messages.showConfirm('Code block copied!', 1500);
 }
 
 function add_message(x, id=null) {
