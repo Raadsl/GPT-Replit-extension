@@ -575,23 +575,20 @@ circlespan:before {
   margin: 4px 2px;
   cursor: pointer;
   border-radius: 5px;
-  box-shadow: 0 6px 15px 0 rgba(0, 0, 0, 0.2);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .button:hover {
   background-color: var(--accent-primary-stronger);
-  transform: scale(1.05); 
-  box-shadow: 0 6px 20px 0 rgba(0, 0, 0, 0.3); 
-}
-
-.button:focus {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--accent-primary-default), 0 6px 15px 0 rgba(0, 0, 0, 0.2); 
 }
 
 button:active {
   animation: click 0.7s ease;
+}
+
+#reset-settings-button {
+  background-color: var(--accent-red-stronger);
+
 }
 
 input[type="text"], input[type="number"], textarea {
@@ -607,5 +604,3 @@ input[type="text"]:focus, input[type="number"]:focus, textarea:focus {
   border-color: var(--accent-primary-default, #0077ff);
   outline: none;
 }
-
-

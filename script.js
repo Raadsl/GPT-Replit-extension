@@ -26,35 +26,45 @@ getCurrentFile()
 
 let clickTimer = null;
 
-async function onCodeBlockMouseDown(e) {
-  const codeBlock = e.target;
-  if (clickTimer === null) {
-    clickTimer = setTimeout(() => {
-      clickTimer = null;
-    }, 300);
-  } else {
-    clearTimeout(clickTimer);
-    clickTimer = null;
-    await copyCodeBlock(codeBlock);
-    unselectCodeBlockText(codeBlock)
+async function copyCodeBlock(codeBlock) {
+  const range = document.createRange();
+  range.selectNodeContents(codeBlock);
+  window.getSelection().removeAllRanges();
+  window.getSelection().addRange(range);
+  document.execCommand('copy');
+  window.getSelection().removeAllRanges();
+  confetti({
+    particleCount: 30,
+    angle: 180,
+    spread: 55,
+    origin: { y: (event.clientY / window.innerHeight), x: (event.clientX / window.innerWidth) } 
+  })
+  confetti({
+    particleCount: 30,
+    angle: 0,
+    spread: 55,
+    origin: { y: (event.clientY / window.innerHeight), x: (event.clientX / window.innerWidth) } 
+  })
+  if (lastID.copy) {
+    await replit.messages.hideMessage(lastID.copy)
   }
+  lastID.copy = await replit.messages.showConfirm('Code block copied!', 1500);
 }
 
-function unselectCodeBlockText(codeBlock) {
-  if (window.getSelection) { // other browsers
-    let selection = window.getSelection();
-    let range = document.createRange();
-    range.selectNodeContents(codeBlock);
-    selection.removeAllRanges();
-    selection.addRange(range);
-    selection.removeAllRanges(); // remove the range from selection
-  } else if (document.selection) { // IE
-    let range = document.body.createTextRange();
-    range.moveToElementText(codeBlock);
-    range.select();
-    document.selection.empty(); // remove selection
+function getSelectedTextWithin(element) {
+  let text = "";
+  const selection = window.getSelection();
+  if (selection.rangeCount > 0) {
+    const range = selection.getRangeAt(0);
+    // Check if the selection is within the specified element
+    if (element.contains(range.commonAncestorContainer)) {
+      text = selection.toString();
+    }
   }
+  return text;
 }
+
+
 
 function exportMessageHistory() {
   const messageHistory = extractMessages();
@@ -102,31 +112,6 @@ document.getElementById('import-messages-button').addEventListener('click', () =
 
 document.getElementById('import-file').addEventListener('change', importMessageHistory);
 
-async function copyCodeBlock(codeBlock) {
-  const range = document.createRange();
-  range.selectNodeContents(codeBlock);
-  window.getSelection().removeAllRanges();
-  window.getSelection().addRange(range);
-  document.execCommand('copy');
-  window.getSelection().removeAllRanges();
-  confetti({
-    particleCount: 30,
-    angle: 180,
-    spread: 55,
-    origin: { y: (event.clientY / window.innerHeight), x: (event.clientX / window.innerWidth) } 
-  })
-  confetti({
-    particleCount: 30,
-    angle: 0,
-    spread: 55,
-    origin: { y: (event.clientY / window.innerHeight), x: (event.clientX / window.innerWidth) } 
-  })
-  if (lastID.copy) {
-    await replit.messages.hideMessage(lastID.copy)
-  }
-  lastID.copy = await replit.messages.showConfirm('Code block copied!', 1500);
-}
-
 function add_message(x, id=null) {
   const chatMessages = document.getElementById('chat-messages');
   const isNearBottom = chatMessages.scrollHeight - chatMessages.clientHeight - chatMessages.scrollTop < 60;
@@ -150,18 +135,34 @@ function add_message(x, id=null) {
   }
  const codeBlocks = messageDiv.querySelectorAll('pre code');
   codeBlocks.forEach((codeBlock, index) => {
-    codeBlock.title = 'Double-click to copy';
-    codeBlock.addEventListener('mousedown', onCodeBlockMouseDown);
+    
+    const settings = loadRawSettings();
+    const doubleClickCopy = settings && settings.doubleClickCopy;
 
-    if (index === 0) {
-      const footer = document.createElement('div');
-      footer.innerText = 'Double-click to copy';
-      footer.style.fontSize = '0.8em';
-      footer.style.textAlign = 'right';
+    const copyButton = document.createElement('button');
+    copyButton.innerHTML= '<i class="fa-solid fa-copy"></i>';
+    copyButton.classList.add('button');
+    copyButton.style.position = 'absolute';
+    copyButton.style.top = '0';
+    copyButton.style.right = '0';
+
+    const footer = document.createElement('div');
+    footer.innerText = 'Double-click to copy';
+    footer.style.fontSize = '0.8em';
+    footer.style.textAlign = 'right';
+    
+
+    if (doubleClickCopy) {
+      codeBlock.addEventListener('dblclick', (event) => copyCodeBlock(codeBlock, event));
       codeBlock.parentNode.appendChild(footer);
+    } else {
+      copyButton.addEventListener('click', (event) => copyCodeBlock(codeBlock, event));
+      codeBlock.parentNode.style.position = 'relative'; 
+      codeBlock.parentNode.appendChild(copyButton);
     }
+
+    
   });
-  // Scroll to the bottom of the chat-messages div
   if (isNearBottom) {
     chatMessages.scrollTop = chatMessages.scrollHeight;
   }
@@ -423,7 +424,7 @@ stopButton.addEventListener("click", () => {
 });
 
 const passwordInput = document.getElementById('KEY');
-const savedPassword = localStorage.getItem('OPENAI-API-KEY_GPT-REPLIT|V1.5.3') || localStorage.getItem('OPENAI-API-KEY_GPT-REPLIT') || localStorage.getItem('OPENAI-API-KEY_GPT-REPLIT|V1.5.2');
+const savedPassword = localStorage.getItem('OPENAI-API-KEY_GPT-REPLIT|V1.5.3') || localStorage.getItem('OPENAI-API-KEY_GPT-REPLIT');
 localStorage.setItem('OPENAI-API-KEY_GPT-REPLIT', savedPassword);
 
 if (savedPassword && passwordInput.value != null) {
@@ -454,6 +455,10 @@ async function updateInputMaxLength() {
     userMessageInput.maxLength = 125000 * 3;
     maxContent = 125000 * 3
     localStorage.setItem('selectedMode', selectedMode);
+  }
+  else {
+    userMessageInput.maxLength = 15000 * 3;
+    maxContent = 15000 * 3
   }
 }
 
@@ -497,19 +502,45 @@ window.onclick = function(event) {
 span.onclick = function() {
   modal.style.display = "none";
 }
+
+document.getElementById('reset-settings-button').addEventListener('click', async () => {
+  // Show confirm dialog
+  if (confirm('Are you sure you want to reset the settings to their default values?')) {
+    // Clear settings from local storage
+    localStorage.removeItem('settings');
+
+    // Reset inputs to default values
+    document.getElementById('temperature').value = '0.7';
+    document.getElementById('model').value = 'gpt-3.5-turbo';
+    document.getElementById('double-click-copy').checked = false;
+
+    if(lastID.reset) {
+      await replit.messages.hideMessage(lastID.reset)
+    }
+    lastID.reset = await replit.messages.showError("Reset settings to default", 5500)
+  }
+});
+
+
 document.getElementById('settings-btn').addEventListener('click', async () => {
   const settings = loadRawSettings();
+  console.log(settings)
   if (settings) {
+    document.getElementById('use').checked = settings.hasOwnProperty('used') ? settings.used : false;
     document.getElementById('temperature').value = settings.temp || '0.7';
     document.getElementById('model').value = settings.model || 'gpt-3.5-turbo';
+    document.getElementById('double-click-copy').checked = settings.hasOwnProperty('doubleClickCopy') ? settings.doubleClickCopy : true;
+
   }
   document.getElementById('settings-modal').style.display = 'block';
 });
+
 document.getElementById('save-settings-button').addEventListener('click', async () => {
   const settings = {
     used: document.getElementById('use').checked,
     temp: document.getElementById('temperature').value,
     model: document.getElementById('model').value,
+    doubleClickCopy: document.getElementById('double-click-copy').checked 
   };
   saveSettings(settings)
   if(lastID.save) {
@@ -517,7 +548,45 @@ document.getElementById('save-settings-button').addEventListener('click', async 
   }
   lastID.save = await replit.messages.showNotice("Saved custom settings", 1500)
   modal.style.display = "none";
+  await customModelUpdate();
 });
+
+async function customModelUpdate() {
+  const settings = loadSettings();
+  const modelSelect = document.getElementById('mode');
+
+  // Find the disabled option
+  const disabledOption = Array.from(modelSelect.options).find(option => option.value === 'disabled');
+
+  if (settings && settings.used) {
+    if(!lastID.customModalWarning) {
+      lastID.customModalWarning = await replit.messages.showNotice("Watch out, your now using a custom modal. We have no system yet to limit the characters so it might error!", 8500)
+    }
+    if (!disabledOption) {
+      const newDisabledOption = document.createElement('option');
+      newDisabledOption.textContent = 'Disabled';
+      newDisabledOption.value = 'disabled';
+      modelSelect.appendChild(newDisabledOption);
+    }
+    modelSelect.value = 'disabled';  // Select the disabled option
+    modelSelect.disabled = true;
+
+  } else {
+    // Remove the disabled option if it exists
+    if (disabledOption) {
+      modelSelect.removeChild(disabledOption);
+    }
+    modelSelect.disabled = false;
+  }
+}
+
+setInterval(async function() {
+  await customModelUpdate()
+}, 60000); 
+
+window.onload = function() {
+  customModelUpdate()
+}
 
 const modeSelector = document.getElementById("mode");
 modeSelector.addEventListener("change", updateInputMaxLength);

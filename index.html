@@ -97,7 +97,7 @@
     setTimeout(function() {
       loadingScreen.style.display = 'none';
     }, 400);
-  console.log("[Replit-GPT] loaded! V1.5.3")
+  console.log("[Replit-GPT] loaded! V1.5.4")
   </script>
   
 </head>
@@ -145,17 +145,25 @@
     <button class='button' id="import-messages-button">Import Messages</button>
     <input type="file" id="import-file" style="display: none;">
     <hr>
-    <label class="checkbox-container">
+    <label title='Use these custom variables in the chat instead of the default UI' class="checkbox-container">
       Use custom variables
-      <input title='Use these custom variables in the cht instead of the basic UI' id='use' type="checkbox">
+      <input id='use' type="checkbox">
       <span class="checkbox-mark"></span>
     </label>
-    <label for="temperature">Temperature:</label>
+    <label title='The higher the temperature, the more creative the bot is' for="temperature">Temperature:</label>
     <input type="number" id="temperature" placeholder="0.7..">
   
-    <label for="model">Model:</label>
+    <label title="Which model the extension will use, if you check use custom variables this model will be used" for="model">Model:</label>
     <input type="text" id="model" placeholder="gpt-...">
-    <button class='button' id="save-settings-button">Save</button>
+    <hr />
+    <label title='Double click on code block to copy instead of button click'  class="checkbox-container">
+      Double click to copy
+      <input id='double-click-copy' type="checkbox">
+      <span class="checkbox-mark"></span>
+    </label>
+     <button class='button' id="reset-settings-button">Reset Settings</button>
+
+     <button class='button' id="save-settings-button">Save</button>
   </div>
 </div>
 </html>
