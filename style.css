@@ -580,6 +580,7 @@ circlespan:before {
 
 .button:hover {
   background-color: var(--accent-primary-stronger);
+  transition: background-color 0.3s ease;
 }
 
 button:active {
@@ -588,7 +589,6 @@ button:active {
 
 #reset-settings-button {
   background-color: var(--accent-red-stronger);
-
 }
 
 input[type="text"], input[type="number"], textarea {

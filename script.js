@@ -73,7 +73,7 @@ function exportMessageHistory() {
   const url = URL.createObjectURL(dataBlob);
   
   const link = document.createElement('a');
-  link.download = 'messageHistory-GPT-Replit.json';
+  link.download = 'messageHistory_GPT-Replit.json';
   link.href = url;
   link.click();
 }
@@ -137,11 +137,12 @@ function add_message(x, id=null) {
   codeBlocks.forEach((codeBlock, index) => {
     
     const settings = loadRawSettings();
-    const doubleClickCopy = settings && settings.doubleClickCopy;
+    const copyButtonSetting = settings && settings.copyButton;
 
     const copyButton = document.createElement('button');
     copyButton.innerHTML= '<i class="fa-solid fa-copy"></i>';
     copyButton.classList.add('button');
+    copyButton.title='Click to copy'
     copyButton.style.position = 'absolute';
     copyButton.style.top = '0';
     copyButton.style.right = '0';
@@ -152,13 +153,13 @@ function add_message(x, id=null) {
     footer.style.textAlign = 'right';
     
 
-    if (doubleClickCopy) {
-      codeBlock.addEventListener('dblclick', (event) => copyCodeBlock(codeBlock, event));
-      codeBlock.parentNode.appendChild(footer);
-    } else {
+    if (copyButtonSetting) {
       copyButton.addEventListener('click', (event) => copyCodeBlock(codeBlock, event));
       codeBlock.parentNode.style.position = 'relative'; 
       codeBlock.parentNode.appendChild(copyButton);
+    } else {
+      codeBlock.addEventListener('dblclick', (event) => copyCodeBlock(codeBlock, event));
+      codeBlock.parentNode.appendChild(footer);
     }
 
     
@@ -170,7 +171,7 @@ function add_message(x, id=null) {
 }
 
 function playWoosh() {
-  var audio = new Audio('/woosh.mp3');
+  const audio = new Audio('/woosh.mp3');
   audio.play();
 }
 
@@ -224,7 +225,6 @@ clearMessagesButton.addEventListener('click', clearMessages);
 
 async function getSelectedMode() {
   const settings = loadSettings();
-  console.log(settings)
   if (settings && settings.model) {
     return settings.model;
   } else {
@@ -344,10 +344,8 @@ async function getResp() {
 
 async function processResponse(response, messageId) {
   const reader = response.body.getReader();
-  let resp = '';
-  let chunks = '';
-  const synth = window.speechSynthesis;
-  messageCounter++;
+  let result = '';
+  messageCounter++
   if(voice) {
     playWoosh()
   }
@@ -355,9 +353,9 @@ async function processResponse(response, messageId) {
     // Check if stopAI flag is set to true
     if (stopAI) {
       stopAI = false;
-      isGenerating = false
+      isGenerating = false;
       stopButton.disabled = true;
-      replit.messages.showWarning("Stopped generating!", 1000)
+      replit.messages.showWarning("Stopped generating!", 1000);
       break;
     }
 
@@ -365,28 +363,34 @@ async function processResponse(response, messageId) {
     if (done) {
       break;
     }
-    chunks = new TextDecoder().decode(value);
-    if (chunks.includes('data: [DONE]')) {
-      break;
-    }
-    const regex = /^data:\s*(.+?)\s*$/gm;
-    const jsonMatches = chunks.matchAll(regex);
+    const chunk = new TextDecoder().decode(value);
+    const lines = chunk.split('\n');
 
-    for (const jsonMatch of jsonMatches) {
-      const jsonStr = jsonMatch[0].replace(/^data:\s*|\s*$/g, '');
-      const { choices } = JSON.parse(jsonStr);
-
-      for (const { delta } of choices) {
-        const token = delta?.content;
-        if (token) {
-          resp += token;
-          add_message({ type: 'received-msg', text: resp }, messageCounter);
+    for (const line of lines) {
+      if (line.includes('data: [DONE]')) {
+        break;
+      }
+      if (line.startsWith('data:')) {
+        const jsonStr = line.slice(5);
+        try {
+          const data = JSON.parse(jsonStr);
+          if (data.choices) {
+            for (const { delta } of data.choices) {
+              if (delta.content) {
+                result += delta.content;
+              }
+            }
+          }
+          add_message({ type: 'received-msg', text: result }, messageId); 
+        } catch (error) {
+          console.log(`Error parsing JSON: ${error}`);
         }
       }
     }
   }
   isGenerating = false;
 }
+
 
 function extractMessages() {
   const messageHistory = [];
@@ -524,12 +528,11 @@ document.getElementById('reset-settings-button').addEventListener('click', async
 
 document.getElementById('settings-btn').addEventListener('click', async () => {
   const settings = loadRawSettings();
-  console.log(settings)
   if (settings) {
     document.getElementById('use').checked = settings.hasOwnProperty('used') ? settings.used : false;
     document.getElementById('temperature').value = settings.temp || '0.7';
     document.getElementById('model').value = settings.model || 'gpt-3.5-turbo';
-    document.getElementById('double-click-copy').checked = settings.hasOwnProperty('doubleClickCopy') ? settings.doubleClickCopy : true;
+    document.getElementById('copy-button').checked = settings.hasOwnProperty('copyButton') ? settings.copyButton : true;
 
   }
   document.getElementById('settings-modal').style.display = 'block';
@@ -540,7 +543,7 @@ document.getElementById('save-settings-button').addEventListener('click', async 
     used: document.getElementById('use').checked,
     temp: document.getElementById('temperature').value,
     model: document.getElementById('model').value,
-    doubleClickCopy: document.getElementById('double-click-copy').checked 
+    copyButton: document.getElementById('copy-button').checked 
   };
   saveSettings(settings)
   if(lastID.save) {

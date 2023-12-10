@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <title>GPT-Replit</title>
   <link rel="stylesheet" href="style.css">
-  <script src="https://unpkg.com/@replit/extensions@1.9.0/dist/index.global.js"></script>
+  <script src="https://unpkg.com/@replit/extensions@1.10.0/dist/index.global.js"></script>
   <script src="https://unpkg.com/dompurify@3.0.3/dist/purify.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.3.1/styles/default.min.css">
@@ -156,9 +156,9 @@
     <label title="Which model the extension will use, if you check use custom variables this model will be used" for="model">Model:</label>
     <input type="text" id="model" placeholder="gpt-...">
     <hr />
-    <label title='Double click on code block to copy instead of button click'  class="checkbox-container">
-      Double click to copy
-      <input id='double-click-copy' type="checkbox">
+    <label title='Use a copy button on codeblocks instead of the double-click to copy system.'  class="checkbox-container">
+      Copy button on codeblocks
+      <input id='copy-button' type="checkbox">
       <span class="checkbox-mark"></span>
     </label>
      <button class='button' id="reset-settings-button">Reset Settings</button>
