@@ -270,7 +270,7 @@ async function getResp() {
   isGenerating = true
   const file = await replit.me.filePath();
   const promptText = document.getElementById("user-message").value;
-  if(promptText=="") {
+  if(promptText=="" || promptText==" ") {
     submit.disabled = false;
     stopButton.disabled = true;
     stopAI = false
@@ -283,7 +283,6 @@ async function getResp() {
   document.getElementById("user-message").value = "";
   const apiKey = document.getElementById("KEY").value;
   const history = extractMessages();
-
   if (file) {
     let filecontent = await replit.fs.readFile(file, "utf8");
     if (filecontent.error) {
@@ -299,7 +298,7 @@ async function getResp() {
     try {
       let filecontent = await replit.fs.readFile(await getCurrentFile());
       if (filecontent.error) {
-        await replit.messages.showError("Error reading file: "+filecontent.error, 3000);
+        await replit.messages.showError("Error reading file: "+filecontent.error, 4000);
         let newObj = { role: "system", content: `You are a helpful programming assistent called Replit-GPT.` };
         history.splice(0, 0, newObj);
       }
@@ -331,7 +330,7 @@ async function getResp() {
       const errorResponse = await response.json();
       throw new Error(errorResponse.error.message);
     }
-    await processResponse(response, messageId);
+    await processResponse(response);
   } catch (error) {
     console.log(`Error fetching response: ${error}`);
     isGenerating = false
@@ -342,7 +341,7 @@ async function getResp() {
   stopButton.disabled = true;
 }
 
-async function processResponse(response, messageId) {
+async function processResponse(response) {
   const reader = response.body.getReader();
   let result = '';
   messageCounter++
@@ -381,7 +380,7 @@ async function processResponse(response, messageId) {
               }
             }
           }
-          add_message({ type: 'received-msg', text: result }, messageId); 
+          add_message({ type: 'received-msg', text: result }, messageCounter); 
         } catch (error) {
           console.log(`Error parsing JSON: ${error}`);
         }
@@ -389,6 +388,7 @@ async function processResponse(response, messageId) {
     }
   }
   isGenerating = false;
+  messageCounter++;
 }
 
 
@@ -443,7 +443,7 @@ async function updateInputMaxLength() {
   const userMessageInput = document.getElementById("user-message");
   const selectedMode = await getSelectedMode();
   if (selectedMode === "gpt-3.5-turbo") { // times 3 because of the token limit, not character limit
-    userMessageInput.maxLength = 15000 * 3;
+    userMessageInput.maxLength = 3500 * 3;
     maxContent = 15000 * 3
     localStorage.setItem('selectedMode', selectedMode);
   } else if (selectedMode === "gpt-4") {
@@ -462,7 +462,7 @@ async function updateInputMaxLength() {
   }
   else {
     userMessageInput.maxLength = 15000 * 3;
-    maxContent = 15000 * 3
+    maxContent = 3700 * 3
   }
 }
 
