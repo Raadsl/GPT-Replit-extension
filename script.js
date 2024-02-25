@@ -133,6 +133,9 @@ function add_message(x, id=null) {
   } else {
     messageDiv.innerHTML = DOMPurify.sanitize(x.text, { USE_PROFILES: { html: true } });
   }
+
+  MathJax.typesetPromise([messageDiv])
+  
  const codeBlocks = messageDiv.querySelectorAll('pre code');
   codeBlocks.forEach((codeBlock, index) => {
     
@@ -236,9 +239,12 @@ async function getSelectedMode() {
 
 let messageCounter = 1;
 
-async function fetchAssistantResponse(apiKey, mode, history, temperature) {
+async function fetchAssistantResponse(apiKey, mode, history, temperature, server) {
+  if(!server) { 
+     server = 'api.openai.com' 
+  }
   try {
-    let response = await fetch('https://api.openai.com/v1/chat/completions', {
+    let response = await fetch(`https://${server}/v1/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -322,9 +328,14 @@ async function getResp() {
   const mode = await getSelectedMode();
   const settings = loadSettings();
   const customTemperature = settings && settings.temperature ? parseFloat(settings.temperature) : 0.7;
-
+  let rawsettings = loadRawSettings();
+  if(rawsettings==null) {
+    rawsettings = {
+      server: 'api.openai.com'
+    }
+  }
   try {
-   const response = await fetchAssistantResponse(apiKey, mode, history, customTemperature);
+   const response = await fetchAssistantResponse(apiKey, mode, history, customTemperature, rawsettings.server);
     console.log(response)
     if (response.status !== 200) {
       const errorResponse = await response.json();
@@ -516,7 +527,8 @@ document.getElementById('reset-settings-button').addEventListener('click', async
     // Reset inputs to default values
     document.getElementById('temperature').value = '0.7';
     document.getElementById('model').value = 'gpt-3.5-turbo';
-    document.getElementById('double-click-copy').checked = false;
+    document.getElementById('copy-button').checked = false;
+    document.getElementById('custom-server').value = 'api.openai.com';
 
     if(lastID.reset) {
       await replit.messages.hideMessage(lastID.reset)
@@ -531,6 +543,7 @@ document.getElementById('settings-btn').addEventListener('click', async () => {
   if (settings) {
     document.getElementById('use').checked = settings.hasOwnProperty('used') ? settings.used : false;
     document.getElementById('temperature').value = settings.temp || '0.7';
+    document.getElementById('custom-server').value = settings.server || 'api.openai.com';
     document.getElementById('model').value = settings.model || 'gpt-3.5-turbo';
     document.getElementById('copy-button').checked = settings.hasOwnProperty('copyButton') ? settings.copyButton : true;
 
@@ -543,7 +556,8 @@ document.getElementById('save-settings-button').addEventListener('click', async 
     used: document.getElementById('use').checked,
     temp: document.getElementById('temperature').value,
     model: document.getElementById('model').value,
-    copyButton: document.getElementById('copy-button').checked 
+    copyButton: document.getElementById('copy-button').checked,
+    server: document.getElementById('custom-server').value,
   };
   saveSettings(settings)
   if(lastID.save) {
@@ -563,7 +577,7 @@ async function customModelUpdate() {
 
   if (settings && settings.used) {
     if(!lastID.customModalWarning) {
-      lastID.customModalWarning = await replit.messages.showNotice("Watch out, your now using a custom modal. We have no system yet to limit the characters so it might error!", 8500)
+      lastID.customModalWarning = await replit.messages.showNotice("Watch out, your now using a custom model. We have no system yet to limit the characters so it might error because you used more tokens that it can handle!", 8500)
     }
     if (!disabledOption) {
       const newDisabledOption = document.createElement('option');

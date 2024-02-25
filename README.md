@@ -11,4 +11,4 @@ Press the three dots at a file and click "Open with GPT-Replit". Now you can ask
  ## Preview
 ![Preview](https://extension-929d2f2e-70e3-407b-b5c7-9b5d4c8e7e20.raadsel.repl.co/cover.png)
 
-V1.5.4
+V1.5.5

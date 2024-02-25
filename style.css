@@ -464,6 +464,7 @@ circlespan:before {
 
 .modal-content input[type="text"],
 .modal-content input[type="number"],
+.modal-content select,
 .modal-content textarea {
   width: 100%;
   margin-bottom: 15px;
@@ -603,4 +604,8 @@ input[type="text"], input[type="number"], textarea {
 input[type="text"]:focus, input[type="number"]:focus, textarea:focus {
   border-color: var(--accent-primary-default, #0077ff);
   outline: none;
+}
+
+.description {
+  font-size: 0.6rem !important;
 }
