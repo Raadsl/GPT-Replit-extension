@@ -21,7 +21,6 @@ header {
   font-family: 'IBM Plex Sans', sans-serif;
   text-shadow: 0 0 10px var(--accent-primary-default);
   margin-bottom: 10px;
-
 }
 
 .chat-container {
@@ -455,7 +454,10 @@ circlespan:before {
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   position: relative;
   transition: all 0.3s ease;
+  max-height: 100vh;
+  overflow-y: auto;
 }
+
 
 .modal-content label {
   font-weight: bold;

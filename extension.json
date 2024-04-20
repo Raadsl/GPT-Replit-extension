@@ -1,7 +1,7 @@
 {
   "name": "GPT-Replit - ChatGPT in your Repl.",
   "description": "A little ChatGPT in your Replit editor that can view your files (if you want).",
-  "longDescription": "# Replit-GPT\nA little ChatGPT in your Replit editor. If you open a file with GPT-replit, the file contents will be passed to the AI so you can ask questions about it.\n\n## Usage:\nPress the three dots at a file and click \"Open with GPT-Replit\". Now you can ask questions and the AI will know the content of the file so you can ask questions about it. You can also just open the Tool icon of GPT-Replit, to use it normal.\nNew feature: Use a free version of chatGPT! Check it out in the server settings",
+  "longDescription": "# Replit-GPT\nA little ChatGPT in your Replit editor. If you open a file with GPT-replit, the file contents will be passed to the AI so you can ask questions about it.\n\n## Usage:\nPress the three dots at a file and click \"Open with GPT-Replit\". Now you can ask questions and the AI will know the content of the file so you can ask questions about it. You can also just open the Tool icon of GPT-Replit, to use it normal.\nNew feature: Use a free version of chatGPT! Check it out in the server settings.",
   "tags": ["ChatGPT", "GPT", "GPT-4", "AI", "GPT-3", "Raadsel", "read files", "voice", "chat", "code help"],
   "icon": "icon.svg",
   "website": "https://www.raadsel.tech",

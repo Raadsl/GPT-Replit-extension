@@ -163,17 +163,21 @@
       <input id='copy-button' type="checkbox">
       <span class="checkbox-mark"></span>
     </label>
+    <label title='Tells GPT to "quit yapping". This keeps the answers short.'  class="checkbox-container">
+      No yapping
+      <input id='noyap-btn' type="checkbox">
+      <span class="checkbox-mark"></span>
+    </label>
     <br />
     <hr />
     <label title="Only for advanced users">
-      
   Server:
   <select title="custom server" id="custom-server">
     <option value="api.openai.com" selected>Default (openAI)</option>
     <option value="api.pawan.krd/pai-001">PAI</option>
   </select>
     </label>
-    <p class="description">For more information about the PAI server, you can look <a class="description" href="https://discord.pawan.krd/" target="_blank">here</a>.</p>
+    <p class="description">PAI server only works with GPT-4. For more information about the PAI server, you can look <a class="description" href="https://discord.pawan.krd/" target="_blank">here</a>.</p>
     <hr />
      <button class='button' id="reset-settings-button">Reset Settings</button>
 

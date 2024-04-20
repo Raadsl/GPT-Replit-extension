@@ -17,7 +17,7 @@ function escapeHtml(unsafe) {
 let currentFile = null
 async function getCurrentFile() {
   const file = await replit.session.getActiveFile()
-  if(file !== null) {
+  if (file !== null) {
     currentFile = file
   }
   return currentFile
@@ -37,13 +37,13 @@ async function copyCodeBlock(codeBlock) {
     particleCount: 30,
     angle: 180,
     spread: 55,
-    origin: { y: (event.clientY / window.innerHeight), x: (event.clientX / window.innerWidth) } 
+    origin: { y: (event.clientY / window.innerHeight), x: (event.clientX / window.innerWidth) }
   })
   confetti({
     particleCount: 30,
     angle: 0,
     spread: 55,
-    origin: { y: (event.clientY / window.innerHeight), x: (event.clientX / window.innerWidth) } 
+    origin: { y: (event.clientY / window.innerHeight), x: (event.clientX / window.innerWidth) }
   })
   if (lastID.copy) {
     await replit.messages.hideMessage(lastID.copy)
@@ -69,9 +69,9 @@ function getSelectedTextWithin(element) {
 function exportMessageHistory() {
   const messageHistory = extractMessages();
   const dataStr = JSON.stringify(messageHistory);
-  const dataBlob = new Blob([dataStr], {type: 'application/json'});
+  const dataBlob = new Blob([dataStr], { type: 'application/json' });
   const url = URL.createObjectURL(dataBlob);
-  
+
   const link = document.createElement('a');
   link.download = 'messageHistory_GPT-Replit.json';
   link.href = url;
@@ -88,14 +88,14 @@ function importMessageHistory(event) {
   const reader = new FileReader();
   reader.onload = (event) => {
     const messages = JSON.parse(event.target.result);
-    
+
     messages.forEach(message => {
       if (message.role === "assistant") {
         add_message({ type: "received-msg", text: message.content });
       } else {
         add_message({ type: message.role + "-msg", text: message.content });
       }
-    });  
+    });
   };
   reader.readAsText(file);
 }
@@ -112,7 +112,7 @@ document.getElementById('import-messages-button').addEventListener('click', () =
 
 document.getElementById('import-file').addEventListener('change', importMessageHistory);
 
-function add_message(x, id=null) {
+function add_message(x, id = null) {
   const chatMessages = document.getElementById('chat-messages');
   const isNearBottom = chatMessages.scrollHeight - chatMessages.clientHeight - chatMessages.scrollTop < 60;
   let messageDiv = null;
@@ -128,24 +128,24 @@ function add_message(x, id=null) {
     chatMessages.appendChild(messageDiv);
   }
 
-  if(!x.noMD) {
+  if (!x.noMD) {
     messageDiv.innerHTML = DOMPurify.sanitize(marked.parse((x.text), { mangle: false, headerIds: false }), { USE_PROFILES: { html: true } });
   } else {
     messageDiv.innerHTML = DOMPurify.sanitize(x.text, { USE_PROFILES: { html: true } });
   }
 
   MathJax.typesetPromise([messageDiv])
-  
- const codeBlocks = messageDiv.querySelectorAll('pre code');
+
+  const codeBlocks = messageDiv.querySelectorAll('pre code');
   codeBlocks.forEach((codeBlock, index) => {
-    
+
     const settings = loadRawSettings();
     const copyButtonSetting = settings && settings.copyButton;
 
     const copyButton = document.createElement('button');
-    copyButton.innerHTML= '<i class="fa-solid fa-copy"></i>';
+    copyButton.innerHTML = '<i class="fa-solid fa-copy"></i>';
     copyButton.classList.add('button');
-    copyButton.title='Click to copy'
+    copyButton.title = 'Click to copy'
     copyButton.style.position = 'absolute';
     copyButton.style.top = '0';
     copyButton.style.right = '0';
@@ -154,18 +154,18 @@ function add_message(x, id=null) {
     footer.innerText = 'Double-click to copy';
     footer.style.fontSize = '0.8em';
     footer.style.textAlign = 'right';
-    
+
 
     if (copyButtonSetting) {
       copyButton.addEventListener('click', (event) => copyCodeBlock(codeBlock, event));
-      codeBlock.parentNode.style.position = 'relative'; 
+      codeBlock.parentNode.style.position = 'relative';
       codeBlock.parentNode.appendChild(copyButton);
     } else {
       codeBlock.addEventListener('dblclick', (event) => copyCodeBlock(codeBlock, event));
       codeBlock.parentNode.appendChild(footer);
     }
 
-    
+
   });
   if (isNearBottom) {
     chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -190,7 +190,7 @@ async function clearMessages() {
   }
 
   messageCounter = 1;
-  if(lastID.clear) {
+  if (lastID.clear) {
     await replit.messages.hideMessage(lastID.clear)
   }
   lastID.clear = await replit.messages.showConfirm("Cleared message history successfully!", 1500);
@@ -240,8 +240,8 @@ async function getSelectedMode() {
 let messageCounter = 1;
 
 async function fetchAssistantResponse(apiKey, mode, history, temperature, server) {
-  if(!server) { 
-     server = 'api.openai.com' 
+  if (!server) {
+    server = 'api.openai.com'
   }
   try {
     let response = await fetch(`https://${server}/v1/chat/completions`, {
@@ -253,7 +253,7 @@ async function fetchAssistantResponse(apiKey, mode, history, temperature, server
       body: JSON.stringify({
         'model': mode,
         'messages': history,
-        'temperature': parseFloat(temperature), 
+        'temperature': parseFloat(temperature),
         'stream': true
       })
     });
@@ -262,7 +262,7 @@ async function fetchAssistantResponse(apiKey, mode, history, temperature, server
     }
     return response;
 
-  } catch(error) {
+  } catch (error) {
     console.log('There was a problem with the fetch operation: ' + error.message);
     console.log(error)
     isGenerating = false
@@ -276,7 +276,7 @@ async function getResp() {
   isGenerating = true
   const file = await replit.me.filePath();
   const promptText = document.getElementById("user-message").value;
-  if(promptText=="" || promptText==" ") {
+  if (promptText == "" || promptText == " ") {
     submit.disabled = false;
     stopButton.disabled = true;
     stopAI = false
@@ -288,6 +288,11 @@ async function getResp() {
   add_message({ type: 'user-msg', text: escapeHtml(promptText), noMD: true }, messageId);
   document.getElementById("user-message").value = "";
   const apiKey = document.getElementById("KEY").value;
+  const yapsettings = loadRawSettings();
+  let noyap = ""
+  if (yapsettings && yapsettings.hasOwnProperty("noyap") && yapsettings.noyap) {
+    noyap = `No yapping, so keep your answers as short as possible. `;
+  }
   const history = extractMessages();
   if (file) {
     let filecontent = await replit.fs.readFile(file, "utf8");
@@ -296,26 +301,25 @@ async function getResp() {
     }
     let newObj = {
       role: "system",
-      content: `You are a helpful programming assistent called Replit-GPT. The user might ask something related to the contents of the file they opened you in (${file}). Here is the content:\n${filecontent.content.substring(0, maxContent)}`
+      content: `You are a helpful programming assistent called Replit-GPT. The user might ask something related to the contents of the file they opened you in (${file}). ${noyap}Here is the content:\n${filecontent.content.substring(0, maxContent)}`
     };
     history.splice(1, 0, newObj);
-    
   } else if (await getCurrentFile() != null) {
     try {
       let filecontent = await replit.fs.readFile(await getCurrentFile());
       if (filecontent.error) {
-        await replit.messages.showError("Error reading file: "+filecontent.error, 4000);
+        await replit.messages.showError("Error reading file: " + filecontent.error, 4000);
         let newObj = { role: "system", content: `You are a helpful programming assistent called Replit-GPT.` };
         history.splice(0, 0, newObj);
       }
       else {
-      let newObj = {
-        role: "system",
-        content: `You are a helpful programming assistent called Replit-GPT. The user might ask something related to the contents of the file they opened most recently (${await getCurrentFile()}). Here is the first 4k characters of the content of '${await getCurrentFile()}':\n${filecontent.content.substring(0, 4000)}`
-      };
-      history.splice(1, 0, newObj);
+        let newObj = {
+          role: "system",
+          content: `You are a helpful programming assistent called Replit-GPT. The user might ask something related to the contents of the file they opened most recently (${await getCurrentFile()}). Here is the first 4k characters of the content of '${await getCurrentFile()}':\n${filecontent.content.substring(0, 4000)}`
+        };
+        history.splice(1, 0, newObj);
       }
-    } catch(err) {
+    } catch (err) {
       console.log(err)
       isGenerating = false
     }
@@ -326,16 +330,17 @@ async function getResp() {
   }
 
   const mode = await getSelectedMode();
-  const settings = loadSettings();
+  const settings = loadRawSettings();
+
   const customTemperature = settings && settings.temperature ? parseFloat(settings.temperature) : 0.7;
   let rawsettings = loadRawSettings();
-  if(rawsettings==null) {
+  if (rawsettings == null) {
     rawsettings = {
       server: 'api.openai.com'
     }
   }
   try {
-   const response = await fetchAssistantResponse(apiKey, mode, history, customTemperature, rawsettings.server);
+    const response = await fetchAssistantResponse(apiKey, mode, history, customTemperature, rawsettings.server);
     console.log(response)
     if (response.status !== 200) {
       const errorResponse = await response.json();
@@ -356,7 +361,7 @@ async function processResponse(response) {
   const reader = response.body.getReader();
   let result = '';
   messageCounter++
-  if(voice) {
+  if (voice) {
     playWoosh()
   }
   while (true) {
@@ -391,7 +396,7 @@ async function processResponse(response) {
               }
             }
           }
-          add_message({ type: 'received-msg', text: result }, messageCounter); 
+          add_message({ type: 'received-msg', text: result }, messageCounter);
         } catch (error) {
           console.log(`Error parsing JSON: ${error}`);
         }
@@ -466,7 +471,7 @@ async function updateInputMaxLength() {
     maxContent = 27000 * 3
     localStorage.setItem('selectedMode', selectedMode);
   }
-   else if (selectedMode === "gpt-4-1106-preview") {
+  else if (selectedMode === "gpt-4-1106-preview") {
     userMessageInput.maxLength = 125000 * 3;
     maxContent = 125000 * 3
     localStorage.setItem('selectedMode', selectedMode);
@@ -479,8 +484,8 @@ async function updateInputMaxLength() {
 
 function loadPreviousMode() {
   const previousMode = localStorage.getItem('selectedMode');
-  if(previousMode){
-      modeSelector.value = previousMode;
+  if (previousMode) {
+    modeSelector.value = previousMode;
   }
   updateInputMaxLength();
 }
@@ -501,7 +506,6 @@ function loadSettings() {
 
 function loadRawSettings() {
   const settings = localStorage.getItem('settings');
-  console.log(JSON.parse(settings))
   return settings ? JSON.parse(settings) : null;
 }
 
@@ -528,9 +532,10 @@ document.getElementById('reset-settings-button').addEventListener('click', async
     document.getElementById('temperature').value = '0.7';
     document.getElementById('model').value = 'gpt-3.5-turbo';
     document.getElementById('copy-button').checked = false;
+    document.getElementById('noyap-btn').checked = false;
     document.getElementById('custom-server').value = 'api.openai.com';
 
-    if(lastID.reset) {
+    if (lastID.reset) {
       await replit.messages.hideMessage(lastID.reset)
     }
     lastID.reset = await replit.messages.showError("Reset settings to default", 5500)
@@ -546,6 +551,8 @@ document.getElementById('settings-btn').addEventListener('click', async () => {
     document.getElementById('custom-server').value = settings.server || 'api.openai.com';
     document.getElementById('model').value = settings.model || 'gpt-3.5-turbo';
     document.getElementById('copy-button').checked = settings.hasOwnProperty('copyButton') ? settings.copyButton : true;
+    document.getElementById('noyap-btn').checked = settings.hasOwnProperty('noyap') ? settings.noyap : true;
+
 
   }
   document.getElementById('settings-modal').style.display = 'block';
@@ -557,10 +564,11 @@ document.getElementById('save-settings-button').addEventListener('click', async 
     temp: document.getElementById('temperature').value,
     model: document.getElementById('model').value,
     copyButton: document.getElementById('copy-button').checked,
+    noyap: document.getElementById('noyap-btn').checked,
     server: document.getElementById('custom-server').value,
   };
   saveSettings(settings)
-  if(lastID.save) {
+  if (lastID.save) {
     await replit.messages.hideMessage(lastID.save)
   }
   lastID.save = await replit.messages.showNotice("Saved custom settings", 1500)
@@ -576,7 +584,7 @@ async function customModelUpdate() {
   const disabledOption = Array.from(modelSelect.options).find(option => option.value === 'disabled');
 
   if (settings && settings.used) {
-    if(!lastID.customModalWarning) {
+    if (!lastID.customModalWarning) {
       lastID.customModalWarning = await replit.messages.showNotice("Watch out, your now using a custom model. We have no system yet to limit the characters so it might error because you used more tokens that it can handle!", 8500)
     }
     if (!disabledOption) {
@@ -599,7 +607,7 @@ async function customModelUpdate() {
 
 setInterval(async function() {
   await customModelUpdate()
-}, 60000); 
+}, 60000);
 
 window.onload = function() {
   customModelUpdate()
