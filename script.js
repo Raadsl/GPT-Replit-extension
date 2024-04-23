@@ -125,6 +125,12 @@ function add_message(x, id = null) {
     if (id !== null) {
       messageDiv.id = `message-${id}`;
     }
+    if (x.image) {
+      const imageElement = document.createElement('img');
+      imageElement.src = x.image;
+      imageElement.classList.add('chat-image');
+      messageDiv.appendChild(imageElement);
+    }
     chatMessages.appendChild(messageDiv);
   }
 
@@ -309,13 +315,13 @@ async function getResp() {
       let filecontent = await replit.fs.readFile(await getCurrentFile());
       if (filecontent.error) {
         await replit.messages.showError("Error reading file: " + filecontent.error, 4000);
-        let newObj = { role: "system", content: `You are a helpful programming assistent called Replit-GPT.` };
+        let newObj = { role: "system", content: `You are a helpful programming assistent called Replit-GPT. ${noyap}` };
         history.splice(0, 0, newObj);
       }
       else {
         let newObj = {
           role: "system",
-          content: `You are a helpful programming assistent called Replit-GPT. The user might ask something related to the contents of the file they opened most recently (${await getCurrentFile()}). Here is the first 4k characters of the content of '${await getCurrentFile()}':\n${filecontent.content.substring(0, 4000)}`
+          content: `You are a helpful programming assistent called Replit-GPT. The user might ask something related to the contents of the file they opened most recently (${await getCurrentFile()}). ${noyap}Here is the first 4k characters of the content of '${await getCurrentFile()}':\n${filecontent.content.substring(0, 4000)}`
         };
         history.splice(1, 0, newObj);
       }
@@ -325,7 +331,7 @@ async function getResp() {
     }
   }
   else {
-    let newObj = { role: "system", content: `You are a helpful programming assistent called Replit-GPT.` };
+    let newObj = { role: "system", content: `You are a helpful programming assistent called Replit-GPT. ${noyap}` };
     history.splice(0, 0, newObj);
   }
 
@@ -612,6 +618,10 @@ setInterval(async function() {
 window.onload = function() {
   customModelUpdate()
 }
+
+document.getElementById('upload-trigger').addEventListener('click', function() {
+  document.getElementById('image-upload').click();
+});
 
 const modeSelector = document.getElementById("mode");
 modeSelector.addEventListener("change", updateInputMaxLength);
