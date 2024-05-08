@@ -1,8 +1,8 @@
 {
   "name": "GPT-Replit - ChatGPT in your Repl.",
   "description": "A little ChatGPT in your Replit editor that can view your files (if you want).",
-  "longDescription": "# Replit-GPT\nA little ChatGPT in your Replit editor. If you open a file with GPT-replit, the file contents will be passed to the AI so you can ask questions about it.\n\n## Usage:\nPress the three dots at a file and click \"Open with GPT-Replit\". Now you can ask questions and the AI will know the content of the file so you can ask questions about it. You can also just open the Tool icon of GPT-Replit, to use it normal.\nNew feature: Use a free version of chatGPT! Check it out in the server settings.",
-  "tags": ["ChatGPT", "GPT", "GPT-4", "AI", "GPT-3", "Raadsel", "read files", "voice", "chat", "code help"],
+  "longDescription": "# Replit-GPT\n\nA little ChatGPT in your Replit editor. If you open a file with GPT-replit, the file contents will be passed to the AI so you can ask questions about it.\n\n## Usage:\nOpen GPT-Replit in a pane and press the + button, now a pop-up should open. Choose the file(s) you want the AI to know. Now you can ask questions about the code in the file(s). Press the microphone to use your voice to ask questions. The gear icon can be pressed to customize the response.",
+  "tags": ["ChatGPT", "GPT", "GPT-4", "AI assistant", "GPT-3", "Raadsel", "read files", "voice", "chat", "code help"],
   "icon": "icon.svg",
   "website": "https://www.raadsel.tech",
   "coverImages": [
@@ -26,5 +26,23 @@
       "reason": "Reading the opened file to provide more information to GPT"
     }
   ],
-  "background": null
+  "background": null,
+  "features": [
+    {
+      "title": "Open files",
+      "body": "You can open multiple files for the AI to view. This way you can ask the AI about your code and it can accurately respond. Drag the file(s) onto the trash button or just press the delete button on it to remove the AI from accessing it.",
+      "image": "addfiles.png"
+    },
+    {
+      "title": "Chat with GPT using different models.",
+      "body": "You can choose with which models you want to talk to. We have some preset, like `GPT-4 Turbo`, `GPT-4`, `GPT-4 32K` and `GPT3.5 Turbo`, but you can enter other models.",
+      "image": "cover.png"
+  },
+
+    {
+      "title": "Analyse images",
+      "body": "Soon you will be able to let the AI analyse images you upload to the chat!",
+      "image": "imageexample.png"
+  }
+  ]
 }
