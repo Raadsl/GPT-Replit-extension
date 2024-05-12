@@ -40,12 +40,20 @@ async function copyCodeBlock(codeBlock, event) {
   try {
     await navigator.clipboard.writeText(textToCopy);
     triggerConfetti(event);
-    await showMessage('Code block copied!');
+    if (lastID.copy) {
+      await replit.messages.hideMessage(lastID.copy);
+    }
+    lastID.copy = await replit.messages.showConfirm("Codeblock copied!", 1500);
   } catch (err) {
-    console.error('Failed to copy text: ', err);
-    await showMessage('Failed to copy code block!');
+    console.error('Failed to copy text:', err);
+    if (lastID.copy) {
+      await replit.messages.hideMessage(lastID.copy);
+    }
+    lastID.copy = await replit.messages.showNotice("Failed to copy codeblock. Error: " + err.message, 1500);
   }
 }
+
+
 
 function triggerConfetti(event) {
   const origin = {
@@ -65,13 +73,6 @@ function triggerConfetti(event) {
     spread: 55,
     origin
   });
-}
-
-async function showMessage(message) {
-  if (lastID.copy) {
-    await replit.messages.hideMessage(lastID.copy);
-  }
-  lastID.copy = await replit.messages.showConfirm(message, 1500);
 }
 
 
@@ -150,8 +151,10 @@ function add_message(x, id = null) {
     if (id !== null) {
       messageDiv.id = `message-${id}`;
     }
+    
     chatMessages.appendChild(messageDiv);
   }
+
 
   if (!x.noMD) {
     messageDiv.innerHTML = DOMPurify.sanitize(marked.parse((x.text), { mangle: false, headerIds: false }), { USE_PROFILES: { html: true } });
@@ -192,6 +195,23 @@ function add_message(x, id = null) {
 
 
   });
+  if (x.image) {
+    const img = document.createElement('img');
+    img.src = x.image;
+    img.classList.add("user-upload-image")
+    img.alt = "User uploaded image";
+    messageDiv.appendChild(img);
+    console.log(messageDiv, img)
+    const container = document.getElementById('image-preview-container');
+    container.style.display = 'none';
+    base64Image = null
+    document.getElementById('image-preview').src = '';
+  } else {
+    const container = document.getElementById('image-preview-container');
+    container.style.display = 'none';
+    base64Image = null
+    document.getElementById('image-preview').src = '';
+  }
   if (isNearBottom) {
     chatMessages.scrollTop = chatMessages.scrollHeight;
   }
@@ -291,28 +311,45 @@ async function fetchAssistantResponse(apiKey, mode, history, temperature, server
   } catch (error) {
     console.log('There was a problem with the fetch operation: ' + error.message);
     console.log(error)
-    isGenerating = false
+    toggleGenerating(false)
   }
 }
+
+function toggleGenerating(value) {
+  const headerBanner = document.getElementById("headerbanner")
+  isGenerating = value
+  if(value == true) {
+      headerBanner.innerHTML = `<div id="loading-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`;
+  } else {
+    headerBanner.innerHTML = `GPT-Replit`;
+  }
+}
+
+
 
 async function getResp() {
   submit.disabled = true;
   stopButton.disabled = false;
   stopAI = false;
-  isGenerating = true;
-  
+  toggleGenerating(true);
+  closeAllOptions()
   const promptText = document.getElementById("user-message").value;
   if (promptText == "" || promptText == " ") {
     submit.disabled = false;
     stopButton.disabled = true;
     stopAI = false;
-    isGenerating = false;
+    toggleGenerating(false);
     return;
   }
   messageCounter++;
+  
   const messageId = messageCounter;
-  closePopup()
-  add_message({ type: 'user-msg', text: escapeHtml(promptText), noMD: true }, messageId);
+  if(base64Image && await getSelectedMode() =="gpt-4-turbo") {
+    add_message({ type: 'user-msg', text: escapeHtml(promptText), noMD: true, image: base64Image }, messageId);
+    
+  } else {
+    add_message({ type: 'user-msg', text: escapeHtml(promptText), noMD: true }, messageId);
+  }
   document.getElementById("user-message").value = "";
   const apiKey = document.getElementById("KEY").value;
   const yapsettings = loadRawSettings();
@@ -321,10 +358,9 @@ async function getResp() {
     noyap = `No yapping, so keep your answers as short as possible. `;
   }
   
-  let systemMessage = `You are a helpful programming assistant called Replit-GPT.`;
+  let systemMessage = `You are a helpful programming assistant called Replit-GPT. ${noyap}`;
   const fileContents = {};
   const history = extractMessages();
-
   if (Object.keys(useFiles).length > 0) {
       let filesInfo = [];
       for (const filePath in useFiles) {
@@ -357,7 +393,6 @@ async function getResp() {
       server: 'api.openai.com'
     };
   }
-
   try {
     const response = await fetchAssistantResponse(apiKey, mode, history, customTemperature, rawsettings.server);
     if (response.status !== 200) {
@@ -367,11 +402,11 @@ async function getResp() {
     await processResponse(response);
   } catch (error) {
     console.log(`Error fetching response: ${error}`);
-    isGenerating = false;
+    toggleGenerating(false);
     messageCounter++;
     add_message({ type: 'error-msg', text: `Error fetching response, ${error.message}` }, messageCounter);
   }
-  console.log(useFiles)
+  console.log(history)
 
   submit.disabled = false;
   stopButton.disabled = true;
@@ -389,7 +424,7 @@ async function processResponse(response) {
     // Check if stopAI flag is set to true
     if (stopAI) {
       stopAI = false;
-      isGenerating = false;
+      toggleGenerating(false);
       stopButton.disabled = true;
       replit.messages.showWarning("Stopped generating!", 1000);
       break;
@@ -424,34 +459,55 @@ async function processResponse(response) {
       }
     }
   }
-  isGenerating = false;
+  toggleGenerating(false)
   messageCounter++;
 }
 
 
 function extractMessages() {
-  const messageHistory = [];
-  const chatMessages = document.getElementById('chat-messages');
+    const messageHistory = [];
+    const chatMessages = document.getElementById('chat-messages').children;
+    const mode = document.getElementById("mode").value; // Make sure this element exists and captures the current model
 
-  for (const messageElement of chatMessages.children) {
-    const messageObject = {};
+    for (const messageElement of chatMessages) {
+        let messageText = messageElement.textContent.trim(); // Correctly initialize and assign messageText
 
-    if (messageElement.classList.contains('user-msg')) {
-      messageObject.role = 'user';
-    } else if (messageElement.classList.contains('received-msg')) {
-      messageObject.role = 'assistant';
-    } else if (messageElement.classList.contains('error-msg')) {
-      messageObject.role = 'system';
+        const messageContents = [];
+        const images = messageElement.getElementsByClassName('user-upload-image');
+
+        if (mode !== "gpt-4-turbo" && images.length > 0) {
+            messageText += "[ image uploaded by user using another GPT model able to see images. ]";
+        }
+
+        messageContents.push({
+            type: 'text',
+            text: messageText
+        });
+
+        if (mode === "gpt-4-turbo") {
+            for (const img of images) {
+                messageContents.push({
+                    type: 'image_url',
+                    image_url: { url: img.src }
+                });
+            }
+        }
+
+        const messageObject = {
+            role: messageElement.classList.contains('user-msg') ? 'user' : (messageElement.classList.contains('system-msg') ? 'system' : 'assistant'),
+            content: messageContents
+        };
+
+        messageHistory.push(messageObject);
     }
 
-    messageObject.content = messageElement.textContent;
-    messageHistory.push(messageObject);
-  }
-  return messageHistory;
+    console.log(messageHistory);
+    return messageHistory;
 }
 
 
-submit.addEventListener("click", getResp);
+
+submit.addEventListener("click", getResp); //!!!!
 var input = document.getElementById("user-message");
 
 input.addEventListener("keypress", function(event) {
@@ -487,58 +543,70 @@ function truncateFilename(filename, maxLength) {
   return `${start}...${end}`;
 }
 
-
 async function updateInputMaxLength() {
-  const userMessageInput = document.getElementById("user-message");
-  const selectedMode = await getSelectedMode();
-  if (selectedMode === "gpt-3.5-turbo") { // times 3 because of the token limit, not character limit
-    userMessageInput.maxLength = 15000 * 3;
-    maxContent = 15000 * 3
-    localStorage.setItem('selectedMode', selectedMode);
-  } else if (selectedMode === "gpt-4") {
-    userMessageInput.maxLength = 7500 * 3;
-    maxContent = 7500 * 3
-    localStorage.setItem('selectedMode', selectedMode);
-  } else if (selectedMode === "gpt-4-32k") {
-    userMessageInput.maxLength = 31500 * 3;
-    maxContent = 27000 * 3
-    localStorage.setItem('selectedMode', selectedMode);
-  }
-  else if (selectedMode === "gpt-4-turbo") {
-    userMessageInput.maxLength = 125000 * 3;
-    maxContent = 125000 * 3
-    localStorage.setItem('selectedMode', selectedMode);
-  }
-  else {
-    userMessageInput.maxLength = 15000 * 3;
-    maxContent = 3700 * 3
-  }
-  updateFileTabTitles();
-  const tabsContainer = document.querySelector('.files-tabs-container');
-  const fileTabs = tabsContainer.querySelectorAll('.file-tab');
-  const numFiles = fileTabs.length + 1;
-  const maxFileContent = Math.floor((maxContent / numFiles) - 1000);
-  if(maxFileContent < 15000) {
-    document.getElementById("file-warning").innerText = `Watch out, if you add a new file we can only read the first ${maxFileContent} characters.`
-  } else {
-    document.getElementById("file-warning").innerText = ``
-  }
+    const userMessageInput = document.getElementById("user-message");
+    const selectedMode = await getSelectedMode();
+    const uploadButton = document.getElementById('upload-image-button');
+    const imagePreviewContainer = document.getElementById('image-preview-container');
+    const deleteImageButton = document.getElementById('delete-image');
+
+    // Reset image preview and hide container when model changes
+    function resetImageUI() {
+        imagePreviewContainer.style.display = 'none';
+        deleteImageButton.style.display = 'none';
+        base64Image = null;
+        document.getElementById('image-preview').src = '';
+        closeAllOptions();
+    }
+
+    if (selectedMode === "gpt-3.5-turbo") { 
+        userMessageInput.maxLength = 15000 * 3;
+        maxContent = 15000 * 3;
+        localStorage.setItem('selectedMode', selectedMode);
+        uploadButton.style.display = 'none';
+        resetImageUI();
+    } else if (selectedMode === "gpt-4") {
+        userMessageInput.maxLength = 7500 * 3;
+        maxContent = 7500 * 3;
+        localStorage.setItem('selectedMode', selectedMode);
+        uploadButton.style.display = 'none';
+        resetImageUI();
+    } else if (selectedMode === "gpt-4-32k") {
+        userMessageInput.maxLength = 31500 * 3;
+        maxContent = 27000 * 3;
+        localStorage.setItem('selectedMode', selectedMode);
+        uploadButton.style.display = 'none';
+        resetImageUI();
+    } else if (selectedMode === "gpt-4-turbo") {
+        userMessageInput.maxLength = 125000 * 3;
+        maxContent = 125000 * 3;
+        localStorage.setItem('selectedMode', selectedMode);
+        uploadButton.style.display = 'block';
+        
+    } else {
+        userMessageInput.maxLength = 15000 * 3; // Default case
+        maxContent = 15000 * 3; // Default case
+        localStorage.setItem('selectedMode', selectedMode);
+        uploadButton.style.display = 'none';
+        resetImageUI();
+    }
 }
+
+
 
 async function updateAvailableFiles(dropdown, path = './') {
   while (dropdown.options.length > 0) { 
     dropdown.remove(0);
   }
   const excludedFileExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.mp3', ".mp4", ".svg", ".pdf", ".xlsx", ".pptx", ".zip", ".rar", "svg"];
-  const tabsContainer = document.querySelector('.files-tabs-container');
-  const fileTabs = tabsContainer.querySelectorAll('.file-tab');
-  const numFiles = fileTabs.length + 1;
-  const maxFileContent = Math.floor((maxContent / numFiles) - 1000);
-  if(maxFileContent < 15000) {
-    document.getElementById("file-warning").innerText = `Watch out, if you add a new file we can only read the first ${maxFileContent} characters.`
-  } else {
-    document.getElementById("file-warning").innerText = ``
-  }
+
+
+  
+  const option = document.createElement('option');
+  option.text =  `Choose file`;
+  option.disabled = true;
+  option.selected = true;
+  dropdown.appendChild(option);
   
   async function processDirectory(path) {
     const entries = await replit.fs.readDir(path);
@@ -613,7 +681,8 @@ function addFileTab(filename, disableDelete = false) {
     removeButton.disabled = true;
   } else {
     removeButton.onclick = function () {
-      tabsContainer.removeChild(fileTab);
+      fileTab.classList.add('delete-animation')
+      setTimeout(() => tabsContainer.removeChild(fileTab), 500);
       useFiles[filename] = false;
       const dropdown = document.getElementById('file-dropdown');
       if (dropdown) {
@@ -626,142 +695,224 @@ function addFileTab(filename, disableDelete = false) {
   useFiles[filename] = true;
   fileTab.appendChild(removeButton);
   tabsContainer.appendChild(fileTab);
+
+
   updateFileTabTitles();
 }
 
-document.getElementById('add-file-button').addEventListener('dragover', (event) => {
+document.getElementById('file-dropdown').addEventListener('change', function() {
+    const selectedFile = this.value;
+    if (selectedFile) {
+      addFileTab(selectedFile);
+      toggleOptions('file-input-options'); 
+      const dropdown = document.getElementById('file-dropdown');
+      if (dropdown) {
+        updateAvailableFiles(dropdown, "./");
+      }
+    }
+});
+
+function toggleOptions(sectionId) {
+  const sections = ['image-input-options', 'file-input-options'];
+  sections.forEach(id => {
+    const element = document.getElementById(id);
+    if (id === sectionId) {
+      element.style.display = element.style.display === 'none' ? 'block' : 'none'; // Simplify toggle
+      if (element.style.display === 'block') {
+        element.classList.add('show-options');
+        element.classList.remove('hide-options');
+      } else {
+        element.classList.remove('show-options');
+        element.classList.add('hide-options');
+      }
+    } else {
+      // Ensure other sections are closed
+      element.style.display = 'none';
+      element.classList.remove('show-options');
+      element.classList.add('hide-options');
+    }
+  });
+}
+
+
+
+document.getElementById('add-file-button').addEventListener('dragover', function(event) {
   event.preventDefault();
 });
 
-document.getElementById('add-file-button').addEventListener('drop', (event) => {
+document.getElementById('add-file-button').addEventListener('drop', function(event) {
   event.preventDefault();
-  const draggedId = event.dataTransfer.getData('text/plain');
-  const draggedElement = document.getElementById(draggedId);
-  if (draggedElement && (event.target.classList.contains('trash') || event.target.classList.contains('fa-trash-alt'))) {
-    const filename = draggedId.replace('file-tab-', '');
-    draggedElement.remove();
-    useFiles[filename] = false; 
 
+  const id = event.dataTransfer.getData('text/plain');
+  const fileTab = document.getElementById(id);
+
+  if (fileTab) {
+    const filename = fileTab.id.replace('file-tab-', '');
+    useFiles[filename] = false; 
+    fileTab.parentNode.removeChild(fileTab);
     const dropdown = document.getElementById('file-dropdown');
     if (dropdown) {
       updateAvailableFiles(dropdown, "./");
     }
+    updateFileTabTitles();
   }
-  document.getElementById('add-file-button').classList.remove('trash');
 });
 
 
 
-document.getElementById('file-select-btn').addEventListener('click', async function() {
-  const dropdown = document.getElementById('file-dropdown');
-  const selectedFile = dropdown.value;
-  if (selectedFile) {
-    addFileTab(selectedFile);
-    closePopup()
-    const dropdown = document.getElementById('file-dropdown');
-    if (dropdown) {
-      await updateAvailableFiles(dropdown, "./");
+document.getElementById('upload-image-button').addEventListener('click', () => toggleOptions('image-input-options'));
+document.getElementById('add-file-button').addEventListener('click', () => toggleOptions('file-input-options'));
+
+// If you want to programmatically close all fold-outs
+function closeAllOptions() {
+  ['image-input-options', 'file-input-options'].forEach(id => {
+    const element = document.getElementById(id);
+    element.classList.remove('show-options');
+    element.style.display = 'none', 500; 
+  });
+}
+
+
+let base64Image = null; 
+
+async function compressToWebP(base64Data) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.src = base64Data;
+
+        img.onload = () => {
+            let quality = 0.8;
+            const maxFileSize = 20 * 1024 * 1024; 
+
+            const attemptCompression = () => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = img.width;
+                canvas.height = img.height;
+
+                // Draw the image onto the canvas
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                // Convert the canvas content to WebP format and get new base64 string
+                const webpDataUrl = canvas.toDataURL('image/webp', quality);
+
+                // Calculate the approximate file size of the result
+                const fileSize = Math.round((webpDataUrl.length * 3 / 4));
+
+                if (fileSize > maxFileSize && quality > 0.1) {
+                    // Reduce quality and try again
+                    quality -= 0.1;
+                    attemptCompression();
+                } else if (fileSize <= maxFileSize) {
+                    // Satisfies file size condition
+                    resolve(webpDataUrl);
+                } else {
+                    // If the file size is still too large and quality is too low, reject
+                    reject('Unable to compress to desired file size');
+                }
+            };
+
+            attemptCompression();
+        };
+
+        img.onerror = () => {
+            reject('Failed to load image from base64 data. Please check the data and try again.');
+        };
+    });
+}
+
+
+async function useImageUrl() {
+    const imageUrl = document.getElementById('image-url-input').value;
+    if (!imageUrl) {
+        alert("Please enter a URL");
+        return;
     }
-  }
-});
 
-// Function to open the popup
-function openPopup() {
-  const popup = document.getElementById('file-popup');
-  popup.style.top = '50%';
-  popup.style.left = '50%';
-  popup.style.transform = 'translate(-50%, -50%)';
-  popup.classList.add('open'); 
-  document.body.classList.add('body-modal-open'); 
-}
-
-// Function to close the popup
-function closePopup() {
-  const popup = document.getElementById('file-popup');
-  popup.classList.remove('open'); 
-  document.body.classList.remove('body-modal-open'); 
-}
-
-document.getElementById('add-file-button').addEventListener('click', openPopup);
-
-document.getElementById('close-popup').addEventListener('click', closePopup);
-function dragElement(element) {
-  var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-
-  element.onmousedown = dragMouseDown;
-
-  function dragMouseDown(e) {
-    e = e || window.event;
-    //ed the syntax here:
-    if (e.target.closest('#file-dropdown') !== null) {
-      return;  // Prevent dragging when clicking on elements within '#file-dropdown'
+    const regex = /^(https?:\/\/)?([\w-]+(\.[\w-]+)+)([^#\s]*)?$/i;
+    if (!imageUrl.match(regex)) {
+        const UrlButton = document.getElementById("use-image-url-button")
+        UrlButton.disabled = true
+        UrlButton.innerText = "Invalid URL"
+        setTimeout(function() {
+            UrlButton.disabled = false
+            UrlButton.innerText = "Use URL"
+        }, 1500)
+      return
     }
-    e.preventDefault();
-    pos3 = e.clientX;
-    pos4 = e.clientY;
-    document.onmouseup = closeDragElement;
-    document.onmousemove = elementDrag;
-  }
 
-  function elementDrag(e) {
-    e = e || window.event;
-    e.preventDefault();
-    pos1 = pos3 - e.clientX;
-    pos2 = pos4 - e.clientY;
-    pos3 = e.clientX;
-    pos4 = e.clientY;
-    element.style.top = (element.offsetTop - pos2) + "px";
-    element.style.left = (element.offsetLeft - pos1) + "px";
-  }
+    try {
+        const response = await fetch(imageUrl);
+        const blob = await response.blob();
 
-  function closeDragElement() {
-    document.onmouseup = null;
-    document.onmousemove = null;
-  }
+        const base64data = await blobToBase64(blob);
+        const compressedWebPBase64 = await compressToWebP(base64data);
+
+        loadImagePreview(compressedWebPBase64)
+
+        if (typeof toggleOptions === "function") {
+            toggleOptions("image-input-options");
+        }
+        document.getElementById('image-url-input').value = '';
+    } catch (error) {
+        console.error("Failed to load or process image:", error);
+        const UrlButton = document.getElementById("use-image-url-button")
+          UrlButton.disabled = true
+          UrlButton.innerText = "Failed loading image"
+          setTimeout(function() {
+              UrlButton.disabled = false
+              UrlButton.innerText = "Use URL"
+          }, 2500)
+        return
+    }
 }
 
-dragElement(document.getElementById("file-popup"));
+function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+}
 
-//image handling
-let base64Image = null;
+function loadImagePreview(base64Src) {
+  const uploadButton = document.getElementById('upload-image-button');
+  const imagePreviewContainer = document.getElementById('image-preview-container');
+  const deleteImageButton = document.getElementById('delete-image');
+  const imgPreview = document.getElementById('image-preview');
+    uploadButton.style.display = 'block';
+    imagePreviewContainer.style.display = 'block';
+    deleteImageButton.style.display = 'block';
+    
+    imgPreview.src = base64Src;
+    document.getElementById('image-preview-container').style.display = 'block'; 
+    base64Image = base64Src; 
+}
 
-document.getElementById('upload-image-button').addEventListener('click', function() {
-  return alert("This will be implemented in V1.7.0!")
-  if (base64Image) {
-    base64Image = null;
-    this.innerHTML = '<i class="fa-solid fa-image"></i>';
-    this.title = "Upload an image for AI analysis.";
-    document.getElementById('image-uploaded-indicator').style.display = 'none';
-  } else {
-    document.getElementById('image-file-input').click();
+
+document.getElementById('delete-image').addEventListener('click', function() {
+  const container = document.getElementById('image-preview-container');
+  container.style.display = 'none';
+  base64Image = null
+  document.getElementById('image-preview').src = '';
+});
+
+document.getElementById('image-file-input').addEventListener('change', async function(event) {
+  const file = event.target.files[0];
+  if (!file) {
+    console.log("No file chosen");
+    return
+  }
+  try {
+    const base64String = await blobToBase64(file)
+    const compressedWebPBase64 = await compressToWebP(base64String)
+    loadImagePreview(compressedWebPBase64)
+    toggleOptions("image-input-options")
+  } catch (error) {
+    console.error("Failed to load or process image:", error)
   }
 });
-
-document.getElementById('image-file-input').addEventListener('change', function(event) {
-    // Check if files are selected
-    var firstFile = event.target.files[0];
-    var reader = new FileReader();
-
-    reader.onload = function(e) {
-        var base64Image = e.target.result;
-        console.log("Base64 image data:", base64Image);
-        document.getElementById('image-uploaded-indicator').style.display = 'block';
-        document.getElementById('upload-image-button').innerHTML = '<i class="fa-solid fa-check"></i>';
-        document.getElementById('upload-image-button').title = "Image loaded. Click to remove.";
-    };
-
-    reader.onerror = function(e) {
-        console.error("Error reading file:", e.target.error);
-    };
-
-    // Read the file as Data URL (Base64)
-    reader.readAsDataURL(firstFile);
-});
-
-
-
-
-
 
 function scrollToBottom() {
   const chatMessages = document.getElementById('chat-messages');
@@ -798,7 +949,7 @@ function loadRawSettings() {
 }
 
 const modal = document.getElementById('settings-modal');
-const span = document.getElementsByClassName("close")[0];
+const span = document.getElementById('close-modal');
 
 window.onclick = function(event) {
   if (event.target == modal) {
@@ -875,7 +1026,7 @@ async function customModelUpdate() {
 
   if (settings && settings.used) {
     if (!lastID.customModalWarning) {
-      lastID.customModalWarning = await replit.messages.showNotice("Watch out, your now using a custom model. We have no system yet to limit the characters so it might error because you used more tokens that it can handle!", 8500)
+      lastID.customModalWarning = await replit.messages.showNotice("Watch out, your now using a custom model. We have no character limit as we do not know the limit for custom models. It might error because you used more tokens that it can handle!", 8500)
     }
     if (!disabledOption) {
       const newDisabledOption = document.createElement('option');

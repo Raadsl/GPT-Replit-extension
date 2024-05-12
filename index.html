@@ -95,9 +95,12 @@
     catch(err) { 
       console.error(`Not opened as extension, ${err}`)
       add_message({ type: 'received-msg', text: 'Hi there, how can I help you? I was made to be a Replit extension but you can also just use me in the browser!' },1);
-      const filesTabsContainer = document.getElementById('files-tabs-container');
-      if (filesTabsContainer) {
-        filesTabsContainer.style.display = 'none';
+      const addFileButton = document.getElementById('add-file-button');
+      const uploadImageButton = document.getElementById('upload-image-button');
+      if (addFileButton) {
+        addFileButton.style.display = 'none';
+      } if (uploadImageButton) {
+        uploadImageButton.style = "border-radius: 1px 4px 4px 1px !important;"
       }
     }
     const loadingScreen = document.getElementById('loading-screen');
@@ -107,12 +110,12 @@
     setTimeout(function() {
       loadingScreen.style.display = 'none';
     }, 450);
-  console.log("[Replit-GPT] loaded! V1.6.0")
+  console.log("[Replit-GPT] loaded! V1.7.0")
   </script>
 </head>
 <body>
   <div id="loading-screen" aria-labelledby="loading-screen">
-    <div title="We're initializing the extension" class="ring"> V1.6.0
+    <div title="We're initializing the extension" class="ring"> V1.7.0
       <circlespan></circlespan>
       <p>Initialising</p>
     </div>
@@ -120,25 +123,46 @@
   </div>
 
   <div id="main-content" style="opacity:0;">
-  <header aria-label="Replit-GPT" role="banner">Replit-GPT</header>
+  <header id='headerbanner' aria-label="Replit-GPT" role="banner">Replit-GPT</header>
   <div class="chat-container" role="main">
     <div class="chat-messages" id="chat-messages" aria-live="polite">
       <!-- Chat messages will go here -->
+      
+
+    </div>
+    <div id="image-preview-container" style="display: none;">
+      <img title='Preview of uploaded image' id="image-preview" src="" alt="Image preview" />
+      <span title='Delete image' id='delete-image' class="popclose close">&times;</span>
     </div>
     <div class="files-tabs-container" id='files-tabs-container'>
       <button id="scroll-to-bottom-button" title="Scroll to Bottom">
         <i class="fa-solid fa-arrow-down"></i>
       </button>
-      <button id="upload-image-button" title="Upload an image for AI analysis.">
-        <i class="fa-solid fa-image"></i>
+     
+      
+      <button id="upload-image-button" title="Upload Image">
+          <i class="fa-solid fa-image"></i>
       </button>
-      <input type="file" id="image-file-input" style="display: none;" accept="image/*">
+      <div id="image-input-options" style="display: none;">
+          <input type="text" id="image-url-input" placeholder="Enter Image URL" />
+          <button id="use-image-url-button" onclick="useImageUrl();" style="border-radius: 4px 1px 1px 4px;">Use URL</button>
+          <input type="file" id="image-file-input" accept="image/*" style="display: none;"/>
+          <button id="select-image-button" onclick="document.getElementById('image-file-input').click();" style="border-radius: 1px 4px 4px 1px;">Upload Image</button>
+      </div>
 
 
       <button id="add-file-button" title="Add a file for the AI to use">
         <i class="fa-solid fa-plus"></i>
+
       </button>
-      <div class="separator"></div>
+        <div id="file-input-options" style="display: none;">
+            <select id="file-dropdown" class="form-control" aria-label="Select file dropdown">
+                <!-- Options will be dynamically populated -->
+            </select>
+          
+        </div>
+      <div id='filetab-seperator' class="separator"></div>
+
     </div>
     <div class="user-input-container">
       <textarea title="Enter your message here" type="text" rows="1" id="user-message" placeholder="Type your message..." contenteditable="true" aria-label="Enter your message here"></textarea>
@@ -153,7 +177,7 @@
         <option title="max: 16,385 tokens" value='gpt-3.5-turbo' selected>GPT-3.5</option>
         <option title="max: 8,192 tokens" value='gpt-4'>GPT-4</option>
         <option title="max: 32,768 tokens" value='gpt-4-32k'>GPT-4 32K</option>
-        <option title="max: 128,000 tokens" value='gpt-4-turbo'>GPT-4 Turbo</option>
+        <option title="Multimodal model, max: 128,000 tokens" value='gpt-4-turbo'>GPT-4 Turbo</option>
       </select>
       <button title="Stops the AI from responding" id="stop-button" disabled><i class="fas fa-stop"></i></button>
     </div>
@@ -162,7 +186,7 @@
   </div>
 <div id="settings-modal" id='settings-modal' class="modal" aria-labelledby="settings-modal">
   <div class="modal-content" aria-labelledby="settings-modal">
-    <span class="close">&times;</span>
+    <span id='close-modal' class="popclose close">&times;</span>
     <button class='button' id="export-messages-button">Export Messages</button>
     <button class='button' id="import-messages-button">Import Messages</button>
     <input type="file" id="import-file" style="display: none;" accept=".json">
@@ -208,16 +232,18 @@
      <button class='button' id="save-settings-button">Save</button>
   </div>
 </div>
+  <!--
 <div id="file-popup" class="popup" aria-labelledby="file-popup">
   <div class="modal-content popup-content" aria-labelledby="file-popup">
     <span id='close-popup' class="popclose close">&times;</span>
     <div class="input-button-group">
       <select id="file-dropdown" class="form-control" aria-label="Select file dropdown">
-        <!-- Options -->
       </select>
       <button id="file-select-btn" class="button">Open</button>
     </div>
     <p id="file-warning" class="file-warning">With each file you add, the average characters that are read from your files will decrease to match the character limit of your .</p>
   </div>
 </div>
+-->
+
 </html>
