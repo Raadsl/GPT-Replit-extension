@@ -2,7 +2,7 @@
   "name": "GPT-Replit - ChatGPT in your Repl.",
   "description": "A little ChatGPT in your Replit editor that can view your files (if you want).",
   "longDescription": "# Replit-GPT\n\nA little ChatGPT in your Replit editor. If you open files with GPT-replit, the file contents will be passed to the AI so you can ask questions about it.\n\n## Usage:\nOpen GPT-Replit in a pane and press the + button, now a pop-up should open. Choose the file(s) you want the AI to know. Now you can ask questions about the code in the file(s). Press the microphone to use your voice to ask questions. The gear icon can be pressed to customize the response. And when the right model is selected  you can upload images to the conversation",
-  "tags": ["ChatGPT", "GPT", "GPT-4", "AI assistant", "GPT-3", "Raadsel", "read files", "voice", "chat", "code help"],
+  "tags": ["ChatGPT", "GPT", "GPT-4", "AI assistant", "GPT-3", "Raadsel", "read files", "voice", "chat", "code help", "image", "multimodal"],
   "icon": "icon.svg",
   "website": "https://www.raadsel.tech",
   "coverImages": [
@@ -41,14 +41,14 @@
 
     {
       "title": "Analyse images",
-      "body": "You can upload images to the AI which the AI can analyze, you can use this to make your request more clear.",
+      "body": "You can upload images to the AI which the AI can analyze, you can use this to make your request more clear or can be used for a lot of other things. It compresses the uploaded image so that the request will not cost as much.",
       "image": "/coverpageImg1.png"
   },
 
     {
-    title: "\"No yap\" mode",
-    body: "In the settings, you can enable an option to \"quit yapping,\" ensuring the AI provides straightforward answers in every conversation.",
-    image: "/coverpageImg4.png"
+    "title": "\"No yap\" mode",
+    "body": "In the settings, you can enable an option to \"quit yapping,\" ensuring the AI provides straightforward answers in every conversation.",
+    "image": "/coverpageImg4.png"
   }
   ]
 }

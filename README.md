@@ -11,4 +11,4 @@ A little ChatGPT in your Replit editor. If you open a file with GPT-replit, the 
 Open GPT-Replit in a pane and press the + button, now a pop-up should open. Choose the file(s) you want the AI to know. Now you can ask questions about the code in the file(s). Press the microphone to use your voice to ask questions. The gear icon can be pressed to customize the response.
 
 V1.7.0
-11-5-24: 11018 downloads
+12-5-24: 11030 downloads
