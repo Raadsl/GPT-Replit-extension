@@ -988,3 +988,12 @@ input[type="text"]:focus, input[type="number"]:focus, textarea:focus {
 .dot:nth-child(3) {
   animation-delay: -1.0s;
 }
+
+.lazy {
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.lazy.loaded {
+  opacity: 1;
+}

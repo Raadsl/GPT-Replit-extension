@@ -7,6 +7,10 @@ let isGenerating = false;
 let voice = false;
 let lastID = {}
 const useFiles = {};
+const multiModals = ["gpt-4o", "gpt-4-turbo"]
+
+let clickTimer = null;
+
 function escapeHtml(unsafe) {
   let clean = unsafe
     .replace(/&/g, "&amp;")
@@ -16,19 +20,8 @@ function escapeHtml(unsafe) {
     .replace(/'/g, "&#039;");
   return DOMPurify.sanitize(clean, { USE_PROFILES: { html: true } });
 }
-let currentFile = null
-async function getCurrentFile() {
-  const file = await replit.session.getActiveFile()
-  if (file !== null) {
-    currentFile = file
-  }
-  return currentFile
-}
-getCurrentFile()
 
-let clickTimer = null;
-
-async function copyCodeBlock(codeBlock, event) {
+async function copyCodeBlocks(codeBlock, event) {
   const textToCopy = codeBlock.textContent;
   const selection = window.getSelection();
   const range = document.createRange();
@@ -39,7 +32,7 @@ async function copyCodeBlock(codeBlock, event) {
 
   try {
     await navigator.clipboard.writeText(textToCopy);
-    triggerConfetti(event);
+      triggerConfetti(event);
     if (lastID.copy) {
       await replit.messages.hideMessage(lastID.copy);
     }
@@ -102,7 +95,7 @@ function exportMessageHistory() {
 }
 
 async function importMessageHistory(event) {
-  await clearMessages()
+  await clearMessages();
   messageCounter = 1;
   const file = event.target.files[0];
   const reader = new FileReader();
@@ -111,9 +104,11 @@ async function importMessageHistory(event) {
 
     messages.forEach(message => {
       if (message.role === "assistant") {
-        add_message({ type: "received-msg", text: message.content });
+        const messageText = message.content.map(part => part.text).join(" "); 
+        addMessage({ type: "received-msg", text: messageText });
       } else {
-        add_message({ type: message.role + "-msg", text: message.content });
+        const messageText = message.content.map(part => part.text).join(" "); 
+        addMessage({ type: message.role + "-msg", text: messageText });
       }
     });
   };
@@ -122,8 +117,8 @@ async function importMessageHistory(event) {
     await replit.messages.hideMessage(lastID.clear)
   }
   lastID.importmessage = await replit.messages.showConfirm("Successfully imported a new message history", 1500);
-
 }
+
 
 document.getElementById('settings-btn').addEventListener('click', () => {
   document.getElementById('settings-modal').style.display = 'block';
@@ -138,10 +133,11 @@ document.getElementById('import-messages-button').addEventListener('click', () =
 document.getElementById('import-file').addEventListener('change', importMessageHistory);
 
 
-function add_message(x, id = null) {
+function addMessage(x, id = null) {
   const chatMessages = document.getElementById('chat-messages');
   const isNearBottom = chatMessages.scrollHeight - chatMessages.clientHeight - chatMessages.scrollTop < 60;
   let messageDiv = null;
+  const maxLength = 5000; 
   if (id !== null) {
     messageDiv = document.getElementById(`message-${id}`);
   }
@@ -154,13 +150,27 @@ function add_message(x, id = null) {
     
     chatMessages.appendChild(messageDiv);
   }
-
-
-  if (!x.noMD) {
-    messageDiv.innerHTML = DOMPurify.sanitize(marked.parse((x.text), { mangle: false, headerIds: false }), { USE_PROFILES: { html: true } });
+  messageDiv.dataset.fullText = x.text;
+  if (x.text.length > maxLength && x.type == "user-msg") {
+    const truncatedText = x.text.substring(0, maxLength) + '...';
+    const readMoreButton = document.createElement('button');
+    readMoreButton.innerText = 'Read More';
+    readMoreButton.classList.add('button');
+    readMoreButton.onclick = () => {
+      messageDiv.innerHTML = DOMPurify.sanitize(marked.parse((x.text), { mangle: false, headerIds: false }), { USE_PROFILES: { html: true } });
+      MathJax.typesetPromise([messageDiv]);
+      hljs.highlightAll();
+    };
+    messageDiv.innerHTML = DOMPurify.sanitize(marked.parse((truncatedText), { mangle: false, headerIds: false }), { USE_PROFILES: { html: true } });
+    messageDiv.appendChild(readMoreButton);
   } else {
-    messageDiv.innerHTML = DOMPurify.sanitize(x.text, { USE_PROFILES: { html: true } });
+    if (!x.noMD) {
+      messageDiv.innerHTML = DOMPurify.sanitize(marked.parse((x.text), { mangle: false, headerIds: false }), { USE_PROFILES: { html: true } });
+    } else {
+      messageDiv.innerHTML = DOMPurify.sanitize(x.text, { USE_PROFILES: { html: true } });
+    }
   }
+
 
   MathJax.typesetPromise([messageDiv])
 
@@ -185,11 +195,11 @@ function add_message(x, id = null) {
 
 
     if (copyButtonSetting) {
-      copyButton.addEventListener('click', (event) => copyCodeBlock(codeBlock, event));
+      copyButton.addEventListener('click', (event) => copyCodeBlocks(codeBlock, event));
       codeBlock.parentNode.style.position = 'relative';
       codeBlock.parentNode.appendChild(copyButton);
     } else {
-      codeBlock.addEventListener('dblclick', (event) => copyCodeBlock(codeBlock, event));
+      codeBlock.addEventListener('dblclick', (event) => copyCodeBlocks(codeBlock, event));
       codeBlock.parentNode.appendChild(footer);
     }
 
@@ -198,18 +208,17 @@ function add_message(x, id = null) {
   if (x.image) {
     const img = document.createElement('img');
     img.src = x.image;
-    img.classList.add("user-upload-image")
+    img.classList.add("user-upload-image");
     img.alt = "User uploaded image";
     messageDiv.appendChild(img);
-    console.log(messageDiv, img)
     const container = document.getElementById('image-preview-container');
     container.style.display = 'none';
-    base64Image = null
+    base64Image = null;
     document.getElementById('image-preview').src = '';
   } else {
     const container = document.getElementById('image-preview-container');
     container.style.display = 'none';
-    base64Image = null
+    base64Image = null;
     document.getElementById('image-preview').src = '';
   }
   if (isNearBottom) {
@@ -218,10 +227,30 @@ function add_message(x, id = null) {
   hljs.highlightAll();
 }
 
-function playWoosh() {
-  const audio = new Audio('woosh.mp3');
+function playAudio(audioUrl) {
+  const audio = new Audio(audioUrl);
   audio.play();
 }
+//perf
+
+let debounceTimer;
+const debounce = (func, delay) => {
+  return function() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => func.apply(this, arguments), delay);
+  };
+};
+
+function batchDOMUpdates(updates) {
+  const fragment = document.createDocumentFragment();
+  updates.forEach(update => {
+    const element = document.createElement(update.tag);
+    element.innerHTML = update.content;
+    fragment.appendChild(element);
+  });
+  document.getElementById('chat-messages').appendChild(fragment);
+}
+
 
 async function clearMessages() {
   if (isGenerating) {
@@ -289,6 +318,7 @@ async function fetchAssistantResponse(apiKey, mode, history, temperature, server
   if (!server) {
     server = 'api.openai.com'
   }
+  console.log(history)
   try {
     let response = await fetch(`https://${server}/v1/chat/completions`, {
       method: 'POST',
@@ -344,11 +374,12 @@ async function getResp() {
   messageCounter++;
   
   const messageId = messageCounter;
-  if(base64Image && await getSelectedMode() =="gpt-4-turbo") {
-    add_message({ type: 'user-msg', text: escapeHtml(promptText), noMD: true, image: base64Image }, messageId);
+  const selectedMode = await getSelectedMode();
+  if(base64Image && multiModals.includes(selectedMode)) {
+    addMessage({ type: 'user-msg', text: escapeHtml(promptText), noMD: true, image: base64Image }, messageId);
     
   } else {
-    add_message({ type: 'user-msg', text: escapeHtml(promptText), noMD: true }, messageId);
+    addMessage({ type: 'user-msg', text: escapeHtml(promptText), noMD: true }, messageId);
   }
   document.getElementById("user-message").value = "";
   const apiKey = document.getElementById("KEY").value;
@@ -404,9 +435,8 @@ async function getResp() {
     console.log(`Error fetching response: ${error}`);
     toggleGenerating(false);
     messageCounter++;
-    add_message({ type: 'error-msg', text: `Error fetching response, ${error.message}` }, messageCounter);
+    addMessage({ type: 'error-msg', text: `Error fetching response, ${error.message}` }, messageCounter);
   }
-  console.log(history)
 
   submit.disabled = false;
   stopButton.disabled = true;
@@ -418,7 +448,7 @@ async function processResponse(response) {
   let result = '';
   messageCounter++
   if (voice) {
-    playWoosh()
+    playAudio("woosh.mp3")
   }
   while (true) {
     // Check if stopAI flag is set to true
@@ -452,7 +482,7 @@ async function processResponse(response) {
               }
             }
           }
-          add_message({ type: 'received-msg', text: result }, messageCounter);
+            addMessage({ type: 'received-msg', text: result }, messageCounter);
         } catch (error) {
           console.log(`Error parsing JSON: ${error}`);
         }
@@ -464,64 +494,66 @@ async function processResponse(response) {
 }
 
 
-function extractMessages() {
+  function extractMessages() {
     const messageHistory = [];
     const chatMessages = document.getElementById('chat-messages').children;
     const mode = document.getElementById("mode").value; // Make sure this element exists and captures the current model
 
     for (const messageElement of chatMessages) {
-        let messageText = messageElement.textContent.trim(); // Correctly initialize and assign messageText
+      // Read the full message text from the data attribute
+      let messageText = messageElement.dataset.fullText.trim();
 
-        const messageContents = [];
-        const images = messageElement.getElementsByClassName('user-upload-image');
+      const messageContents = [];
+      const images = messageElement.getElementsByClassName('user-upload-image');
 
-        if (mode !== "gpt-4-turbo" && images.length > 0) {
-            messageText += "[ image uploaded by user using another GPT model able to see images. ]";
+      if (multiModals.includes(mode) && images.length > 0) {
+        messageText += "[ image uploaded by user using another GPT model able to see images. ]";
+      }
+
+      messageContents.push({
+        type: 'text',
+        text: messageText
+      });
+
+      if (multiModals.includes(mode)) {
+        for (const img of images) {
+          messageContents.push({
+            type: 'image_url',
+            image_url: { url: img.src }
+          });
         }
+      }
 
-        messageContents.push({
-            type: 'text',
-            text: messageText
-        });
+      const messageObject = {
+        role: messageElement.classList.contains('user-msg') ? 'user' : (messageElement.classList.contains('system-msg') ? 'system' : 'assistant'),
+        content: messageContents
+      };
 
-        if (mode === "gpt-4-turbo") {
-            for (const img of images) {
-                messageContents.push({
-                    type: 'image_url',
-                    image_url: { url: img.src }
-                });
-            }
-        }
-
-        const messageObject = {
-            role: messageElement.classList.contains('user-msg') ? 'user' : (messageElement.classList.contains('system-msg') ? 'system' : 'assistant'),
-            content: messageContents
-        };
-
-        messageHistory.push(messageObject);
+      messageHistory.push(messageObject);
     }
 
-    console.log(messageHistory);
     return messageHistory;
-}
+  }
+
 
 
 
 submit.addEventListener("click", getResp); //!!!!
 var input = document.getElementById("user-message");
 
-input.addEventListener("keypress", function(event) {
+input.addEventListener("keypress", debounce(function(event) {
   if (event.key === "Enter" && !event.shiftKey) {
     event.preventDefault();
     submit.click();
   }
-});
+}, 300));
+
 stopButton.addEventListener("click", () => {
   stopAI = true;
 });
 
 const passwordInput = document.getElementById('KEY');
-const savedPassword = localStorage.getItem('OPENAI-API-KEY_GPT-REPLIT|V1.5.3') || localStorage.getItem('OPENAI-API-KEY_GPT-REPLIT');
+const savedPassword = localStorage.getItem('OPENAI-API-KEY_GPT-REPLIT|V1.5.3') || localStorage.getItem('OPENAI-API-KEY_GPT-REPLIT'); //legacy storagename
 localStorage.setItem('OPENAI-API-KEY_GPT-REPLIT', savedPassword);
 
 if (savedPassword && passwordInput.value != null) {
@@ -582,8 +614,13 @@ async function updateInputMaxLength() {
         maxContent = 125000 * 3;
         localStorage.setItem('selectedMode', selectedMode);
         uploadButton.style.display = 'block';
-        
-    } else {
+    } else if (selectedMode === "gpt-4o") {
+      userMessageInput.maxLength = 200000 * 3;
+      maxContent = 200000 * 3;
+      localStorage.setItem('selectedMode', selectedMode);
+      uploadButton.style.display = 'block';
+    }
+    else {
         userMessageInput.maxLength = 15000 * 3; // Default case
         maxContent = 15000 * 3; // Default case
         localStorage.setItem('selectedMode', selectedMode);
@@ -598,21 +635,20 @@ async function updateAvailableFiles(dropdown, path = './') {
   while (dropdown.options.length > 0) { 
     dropdown.remove(0);
   }
-  const excludedFileExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.mp3', ".mp4", ".svg", ".pdf", ".xlsx", ".pptx", ".zip", ".rar", "svg"];
+  const excludedFileExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.mp3', '.mp4', '.svg', '.pdf', '.xlsx', '.pptx', '.zip', '.rar', '.svg'];
+  const excludedDirectories = ['node_modules', '.git', 'venv', 'dist', 'build'];
 
-
-  
   const option = document.createElement('option');
-  option.text =  `Choose file`;
+  option.text = 'Choose file';
   option.disabled = true;
   option.selected = true;
   dropdown.appendChild(option);
-  
+
   async function processDirectory(path) {
     const entries = await replit.fs.readDir(path);
 
     for (const entry of entries.children) {
-      if (entry.type === 'DIRECTORY' && !entry.filename.startsWith(".")) {
+      if (entry.type === 'DIRECTORY' && !entry.filename.startsWith(".") && !excludedDirectories.includes(entry.filename)) {
         await processDirectory(`${path}${entry.filename}/`);
       } else if (entry.type === 'FILE') {
         const fileExtension = entry.filename.slice(entry.filename.lastIndexOf(".")).toLowerCase();
@@ -629,6 +665,7 @@ async function updateAvailableFiles(dropdown, path = './') {
   }
   await processDirectory(path);
 }
+
 
 function updateFileTabTitles() {
   const tabsContainer = document.querySelector('.files-tabs-container');
@@ -910,7 +947,15 @@ document.getElementById('image-file-input').addEventListener('change', async fun
     loadImagePreview(compressedWebPBase64)
     toggleOptions("image-input-options")
   } catch (error) {
-    console.error("Failed to load or process image:", error)
+    const UrlButton = document.getElementById("use-image-url-button")
+      UrlButton.disabled = true
+      UrlButton.innerText = "Failed loading image"
+      setTimeout(function() {
+          UrlButton.disabled = false
+          UrlButton.innerText = "Use URL"
+      }, 2500)
+    return
+    
   }
 });
 
@@ -1015,6 +1060,19 @@ document.getElementById('save-settings-button').addEventListener('click', async 
   await customModelUpdate();
 });
 
+function lazyLoadImages() {
+  const lazyImages = document.querySelectorAll('img.lazy');
+  lazyImages.forEach(img => {
+    if (img.getBoundingClientRect().top < window.innerHeight) {
+      img.src = img.dataset.src;
+      img.onload = () => {
+        img.classList.add('loaded');
+      };
+    }
+  });
+}
+
+document.addEventListener('scroll', lazyLoadImages);
 
 
 async function customModelUpdate() {
@@ -1036,12 +1094,14 @@ async function customModelUpdate() {
     }
     modelSelect.value = 'disabled';  // Select the disabled option
     modelSelect.disabled = true;
+    modelSelect.title = 'You are using custom variables'
 
   } else {
     // Remove the disabled option if it exists
     if (disabledOption) {
       modelSelect.removeChild(disabledOption);
     }
+    modelSelect.title = 'select which GPT model you want to use.'
     modelSelect.disabled = false;
   }
 }
@@ -1053,6 +1113,7 @@ setInterval(async function() {
 window.onload = function() {
   customModelUpdate()
   loadPreviousMode()
+  lazyLoadImages()
 }
 
 const modeSelector = document.getElementById("mode");

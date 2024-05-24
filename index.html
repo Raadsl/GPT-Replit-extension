@@ -53,7 +53,7 @@
         console.error('Dropdown element not found!');
       }
       if (file) {
-        add_message({ type: 'received-msg', text: `Hi there, how can I help you? You can ask questions about the ${file} file` },1);
+        addMessage({ type: 'received-msg', text: `Hi there, how can I help you? You can ask questions about the ${file} file` },1);
         await replit.messages.showConfirm("Replit-GPT loaded", 1500);
         await replit.messages.showNotice("The content of the file will be passed to the AI to improve performance!", 2000);
         addFileTab(file, true)
@@ -74,7 +74,7 @@
           }
         }
       } else {
-          add_message({ type: 'received-msg', text: 'Hi there, how can I help you?' },1);
+          addMessage({ type: 'received-msg', text: 'Hi there, how can I help you?' },1);
           await replit.messages.showConfirm("Replit-GPT loaded", 1500);
           // add api key
           const output = await replit.fs.readFile("./.env")
@@ -94,7 +94,7 @@
     }
     catch(err) { 
       console.error(`Not opened as extension, ${err}`)
-      add_message({ type: 'received-msg', text: 'Hi there, how can I help you? I was made to be a Replit extension but you can also just use me in the browser!' },1);
+      addMessage({ type: 'received-msg', text: 'Hi there, how can I help you? I was made to be a Replit extension but you can also just use me in the browser!' },1);
       const addFileButton = document.getElementById('add-file-button');
       const uploadImageButton = document.getElementById('upload-image-button');
       if (addFileButton) {
@@ -110,12 +110,12 @@
     setTimeout(function() {
       loadingScreen.style.display = 'none';
     }, 450);
-  console.log("[Replit-GPT] loaded! V1.7.0")
+  console.log("[Replit-GPT] loaded! V1.7.2")
   </script>
 </head>
 <body>
   <div id="loading-screen" aria-labelledby="loading-screen">
-    <div title="We're initializing the extension" class="ring"> V1.7.0
+    <div title="We're initializing the extension" class="ring"> V1.7.2
       <circlespan></circlespan>
       <p>Initialising</p>
     </div>
@@ -169,7 +169,7 @@
       <button id="send-button" title='Sends the message'> <i class="fa-solid fa-arrow-up"></i> </button>
     </div>
     <div class="user-input-container">
-      <input type="password" id="KEY" placeholder="Enter your openAI API key." title="No requests are made using your key except to openAI's servers. It's also only stored local.">
+      <input type="password" id="KEY" placeholder="Enter your openAI API key." title="While we try to store your API key safely, it is still going through your browser's requests. Use at your own risk."></input>
       <button title='Clears the message history' id="clear-messages-button"><i class="fas fa-trash-alt"></i></button>
       <button title="Opens the settings modal for extra customization" id="settings-btn"><i class="fa-solid fa-gear"></i></button>
       <button title="activates voice mode" id="voice-input-button"><i class="fas fa-microphone"></i></button>
@@ -178,6 +178,7 @@
         <option title="max: 8,192 tokens" value='gpt-4'>GPT-4</option>
         <option title="max: 32,768 tokens" value='gpt-4-32k'>GPT-4 32K</option>
         <option title="Multimodal model, max: 128,000 tokens" value='gpt-4-turbo'>GPT-4 Turbo</option>
+        <option title="Multimodal model, max: 128,000 tokens, uses tokens more efficient" value='gpt-4o'>GPT-4o</option>
       </select>
       <button title="Stops the AI from responding" id="stop-button" disabled><i class="fas fa-stop"></i></button>
     </div>
@@ -223,7 +224,7 @@
   Server:
   <select title="custom server" id="custom-server">
     <option value="api.openai.com" selected>Default (openAI)</option>
-    <option value="api.pawan.krd/pai-001">PAI</option>
+    <option value="api.pawan.krd">PAI</option>
   </select>
     </label>
     <p class="description">PAI server only works with GPT-4. For more information about the PAI server, you can look <a class="description" href="https://discord.pawan.krd/" target="_blank">here</a>.</p>
