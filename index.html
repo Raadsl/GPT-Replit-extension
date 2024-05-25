@@ -56,8 +56,12 @@
         addMessage({ type: 'received-msg', text: `Hi there, how can I help you? You can ask questions about the ${file} file` },1);
         await replit.messages.showConfirm("Replit-GPT loaded", 1500);
         await replit.messages.showNotice("The content of the file will be passed to the AI to improve performance!", 2000);
-        addFileTab(file, true)
-
+        addFileTab(`./${file}`, true)
+        if (dropdown) {
+          await updateAvailableFiles(dropdown, "./");
+        } else {
+          console.error('Dropdown element not found!');
+        }
         //add api key
         const output = await replit.fs.readFile("./.env")
         if(output.content !== null) {
