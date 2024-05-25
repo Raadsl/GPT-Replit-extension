@@ -1,5 +1,5 @@
 # GPT-Replit
-![image](https://2d01ef67-5074-4c9b-958b-ac174907ac4c-00-1kqxpa6vq04cc.janeway.replit.dev/cover-banner.png)
+![image](https://extension-929d2f2e-70e3-407b-b5c7-9b5d4c8e7e20.replit.app/cover-banner.png)
 ## Now verified in the replit store
 View it [here](https://replit.com/extension/@Raadsel/929d2f2e-70e3-407b-b5c7-9b5d4c8e7e20)
 "A little ChatGPT in your Replit editor, that can view your files (if you want)"
