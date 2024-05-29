@@ -661,7 +661,7 @@ circlespan:before {
 
 
 .button {
-  background-color: var(--accent-primary-default, #0077ff);
+  background-color: var(--accent-primary-default, #01d1fe);
   color: var(--foreground-default, #fff);
   border: none;
   padding: 8px 16px;
@@ -676,7 +676,7 @@ circlespan:before {
 }
 
 .button:hover {
-  background-color: var(--accent-primary-stronger, #0077ff);
+  background-color: var(--accent-primary-stronger, #0361fc);
   transition: background-color 0.3s ease;
 }
 

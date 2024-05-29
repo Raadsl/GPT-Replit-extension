@@ -233,14 +233,6 @@ function playAudio(audioUrl) {
 }
 //perf
 
-let debounceTimer;
-const debounce = (func, delay) => {
-  return function() {
-    clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => func.apply(this, arguments), delay);
-  };
-};
-
 function batchDOMUpdates(updates) {
   const fragment = document.createDocumentFragment();
   updates.forEach(update => {
@@ -541,12 +533,13 @@ async function processResponse(response) {
 submit.addEventListener("click", getResp); //!!!!
 var input = document.getElementById("user-message");
 
-input.addEventListener("keypress", debounce(function(event) {
+input.addEventListener("keypress", function(event) {
   if (event.key === "Enter" && !event.shiftKey) {
     event.preventDefault();
     submit.click();
   }
-}, 300));
+});
+
 
 stopButton.addEventListener("click", () => {
   stopAI = true;
