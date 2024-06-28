@@ -307,10 +307,10 @@ async function getSelectedMode() {
 let messageCounter = 1;
 
 async function fetchAssistantResponse(apiKey, mode, history, temperature, server) {
+  console.log(apiKey, mode, history, temperature, server)
   if (!server) {
     server = 'api.openai.com'
   }
-  console.log(history)
   try {
     let response = await fetch(`https://${server}/v1/chat/completions`, {
       method: 'POST',
@@ -328,6 +328,7 @@ async function fetchAssistantResponse(apiKey, mode, history, temperature, server
     if (!response.ok) {
       console.log(`HTTP error! status: ${response.status}`)
     }
+    console.log(response)
     return response;
 
   } catch (error) {
@@ -599,7 +600,7 @@ async function loadApiKey() {
   const unencryptedApiKey = localStorage.getItem(OLD_STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
   if (unencryptedApiKey) {
     passwordInput.value = unencryptedApiKey;
-    replit.messages.showNotice("Loaded unencrypted OpenAI API Key from previous session. It will be encrypted for future use.", 2000);
+    replit.messages.showNotice("Loaded unencrypted OpenAI API Key from previous session. It will be encrypted for future use.", 5000);
 
     // Encrypt and save the key for future use
     await saveApiKey();
