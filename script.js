@@ -263,7 +263,7 @@ async function clearMessages() {
 }
 
 
-function startVoiceInput() {
+async function startVoiceInput() {
   const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
   recognition.lang = 'en-US';
   recognition.interimResults = false;
@@ -274,8 +274,12 @@ function startVoiceInput() {
     document.getElementById('user-message').value = speechResult;
   };
 
-  recognition.onerror = (event) => {
+  recognition.onerror = async (event) => {
     console.error('Speech recognition error:', event.error);
+    if (lastID.voiceerror) {
+      await replit.messages.hideMessage(lastID.voiceerror)
+    }
+    lastID.voiceerror = await replit.messages.showNotice(`Speech recognition error: ${event.error}`, 1234);
   };
 
   recognition.start();
@@ -288,7 +292,9 @@ if (!SpeechRecognition) {
   document.getElementById('voice-input-button').disabled = true;
   document.getElementById('voice-input-button').title = `Your browser does not support the Web Speech API. Please use a supported browser, such as Google Chrome or Microsoft Edge.`;
 } else {
-  document.getElementById('voice-input-button').addEventListener('click', startVoiceInput);
+  document.getElementById('voice-input-button').addEventListener('click', async function() {
+    await startVoiceInput();
+  });
 }
 const clearMessagesButton = document.getElementById('clear-messages-button');
 clearMessagesButton.addEventListener('click', clearMessages);
@@ -307,7 +313,6 @@ async function getSelectedMode() {
 let messageCounter = 1;
 
 async function fetchAssistantResponse(apiKey, mode, history, temperature, server) {
-  console.log(apiKey, mode, history, temperature, server)
   if (!server) {
     server = 'api.openai.com'
   }
@@ -552,7 +557,7 @@ async function getEncryptionKey() {
     return user.id.toString() + "GPT-REPLIT-SALT";
   } catch (error) {
     console.error("Error fetching user data:", error);
-    return "DEFAULT-ENCRYPTION-KEY";
+    return "DEFAULT-ENCRYPTION-KEY-GPTREPLSLT";
   }
 }
 
@@ -627,7 +632,7 @@ async function saveApiKey() {
 }
 
 // Call loadApiKey when the page loads
-loadApiKey();
+
 
 // Add event listener to save the API key when it changes
 passwordInput.addEventListener('change', saveApiKey);
@@ -1230,9 +1235,10 @@ setInterval(async function() {
 }, 60000);
 
 window.onload = function() {
-  customModelUpdate()
-  loadPreviousMode()
-  lazyLoadImages()
+  customModelUpdate();
+  loadPreviousMode();
+  lazyLoadImages();
+  loadApiKey();
 }
 
 const modeSelector = document.getElementById("mode");

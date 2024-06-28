@@ -52,6 +52,8 @@
       } else {
         console.error('Dropdown element not found!');
       }
+      
+
       if (file) {
         addMessage({ type: 'received-msg', text: `Hi there, how can I help you? You can ask questions about the ${file} file` },1);
         await replit.messages.showConfirm("Replit-GPT loaded", 1500);
@@ -78,22 +80,23 @@
           }
         }
       } else {
+          
           addMessage({ type: 'received-msg', text: 'Hi there, how can I help you?' },1);
           await replit.messages.showConfirm("Replit-GPT loaded", 1500);
           // add api key
           const output = await replit.fs.readFile("./.env")
-        if(output.content !== null) {
-          const openAIKeyRegex = /OPENAI_API_KEY="(.+?)"/;
-          const match = output.content.match(openAIKeyRegex);
-          if (match) {
-            const openAI_API_KEY = match[1];
-            console.log('OpenAI API Key found!');
-            document.getElementById("KEY").value = openAI_API_KEY
-            await replit.messages.showNotice("Loaded the openAI API key from your secrets!", 4000);
-          } else {
-            console.log('OpenAI API Key not found in secrets');
+          if(output.content !== null) {
+            const openAIKeyRegex = /OPENAI_API_KEY="(.+?)"/;
+            const match = output.content.match(openAIKeyRegex);
+            if (match) {
+              const openAI_API_KEY = match[1];
+              console.log('OpenAI API Key found!');
+              document.getElementById("KEY").value = openAI_API_KEY
+              await replit.messages.showNotice("Loaded the openAI API key from your secrets!", 4000);
+            } else {
+              console.log('OpenAI API Key not found in secrets');
+            }
           }
-        }
         }
     }
     catch(err) { 
@@ -239,7 +242,6 @@
      <button class='button' id="save-settings-button">Save</button>
   </div>
 </div>
-  <!--
 <div id="file-popup" class="popup" aria-labelledby="file-popup">
   <div class="modal-content popup-content" aria-labelledby="file-popup">
     <span id='close-popup' class="popclose close">&times;</span>
@@ -251,6 +253,6 @@
     <p id="file-warning" class="file-warning">With each file you add, the average characters that are read from your files will decrease to match the character limit of your .</p>
   </div>
 </div>
--->
+
 
 </html>
