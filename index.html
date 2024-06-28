@@ -114,12 +114,12 @@
     setTimeout(function() {
       loadingScreen.style.display = 'none';
     }, 450);
-  console.log("[Replit-GPT] loaded! V1.7.2")
+  console.log("[Replit-GPT] loaded! V1.8.0")
   </script>
 </head>
 <body>
   <div id="loading-screen" aria-labelledby="loading-screen">
-    <div title="We're initializing the extension" class="ring"> V1.7.2
+    <div title="We're initializing the extension" class="ring"> V1.8.0
       <circlespan></circlespan>
       <p>Initialising</p>
     </div>
@@ -160,10 +160,12 @@
 
       </button>
         <div id="file-input-options" style="display: none;">
+          <div class="input-button-group">
+            <input type="text" id="file-search-input" placeholder="Search files...">
             <select id="file-dropdown" class="form-control" aria-label="Select file dropdown">
-                <!-- Options will be dynamically populated -->
+              <!-- Options will be dynamically populated -->
             </select>
-          
+          </div>
         </div>
       <div id='filetab-seperator' class="separator"></div>
 

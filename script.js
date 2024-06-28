@@ -545,17 +545,91 @@ stopButton.addEventListener("click", () => {
   stopAI = true;
 });
 
-const passwordInput = document.getElementById('KEY');
-const savedPassword = localStorage.getItem('OPENAI-API-KEY_GPT-REPLIT|V1.5.3') || localStorage.getItem('OPENAI-API-KEY_GPT-REPLIT'); //legacy storagename
-localStorage.setItem('OPENAI-API-KEY_GPT-REPLIT', savedPassword);
-
-if (savedPassword && passwordInput.value != null) {
-  passwordInput.value = savedPassword;
-  replit.messages.showNotice("Loaded OpenAI API Key from previous session.", 1000)
+async function getEncryptionKey() {
+  try {
+    const { user } = await replit.data.currentUser({});
+    return user.id.toString() + "GPT-REPLIT-SALT";
+  } catch (error) {
+    console.error("Error fetching user data:", error);
+    return "DEFAULT-ENCRYPTION-KEY";
+  }
 }
-passwordInput.addEventListener('change', () => {
-  localStorage.setItem('OPENAI-API-KEY_GPT-REPLIT', passwordInput.value);
-});
+
+async function encryptApiKey(apiKey) {
+  const key = await getEncryptionKey();
+  let encryptedKey = '';
+  for (let i = 0; i < apiKey.length; i++) {
+    const charCode = apiKey.charCodeAt(i) ^ key.charCodeAt(i % key.length);
+    encryptedKey += String.fromCharCode(charCode);
+  }
+  return btoa(encryptedKey);
+}
+
+async function decryptApiKey(encryptedApiKey) {
+  const key = await getEncryptionKey();
+  const decodedKey = atob(encryptedApiKey);
+  let decryptedKey = '';
+  for (let i = 0; i < decodedKey.length; i++) {
+    const charCode = decodedKey.charCodeAt(i) ^ key.charCodeAt(i % key.length);
+    decryptedKey += String.fromCharCode(charCode);
+  }
+  return decryptedKey;
+}
+
+const passwordInput = document.getElementById('KEY');
+const NEW_STORAGE_KEY = 'ENCRYPTED-OPENAI-API-KEY_GPT-REPLIT';
+const OLD_STORAGE_KEY = 'OPENAI-API-KEY_GPT-REPLIT|V1.5.3';
+const LEGACY_STORAGE_KEY = 'OPENAI-API-KEY_GPT-REPLIT';
+
+async function loadApiKey() {
+  // Try to load the encrypted key first
+  const encryptedApiKey = localStorage.getItem(NEW_STORAGE_KEY);
+  if (encryptedApiKey) {
+    try {
+      const decryptedApiKey = await decryptApiKey(encryptedApiKey);
+      passwordInput.value = decryptedApiKey;
+      replit.messages.showNotice("Loaded encrypted OpenAI API Key from previous session.", 1000);
+      return;
+    } catch (error) {
+      console.error('Error decrypting API key:', error);
+    }
+  }
+
+  // If no encrypted key, try to load the unencrypted key
+  const unencryptedApiKey = localStorage.getItem(OLD_STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
+  if (unencryptedApiKey) {
+    passwordInput.value = unencryptedApiKey;
+    replit.messages.showNotice("Loaded unencrypted OpenAI API Key from previous session. It will be encrypted for future use.", 2000);
+
+    // Encrypt and save the key for future use
+    await saveApiKey();
+
+    // Remove the old unencrypted keys
+    localStorage.removeItem(OLD_STORAGE_KEY);
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
+  }
+}
+
+async function saveApiKey() {
+  const apiKey = passwordInput.value;
+  if (apiKey) {
+    try {
+      const encryptedApiKey = await encryptApiKey(apiKey);
+      localStorage.setItem(NEW_STORAGE_KEY, encryptedApiKey);
+    } catch (error) {
+      console.error('Error encrypting API key:', error);
+      replit.messages.showError("Failed to save encrypted API key.", 1500);
+    }
+  } else {
+    localStorage.removeItem(NEW_STORAGE_KEY);
+  }
+}
+
+// Call loadApiKey when the page loads
+loadApiKey();
+
+// Add event listener to save the API key when it changes
+passwordInput.addEventListener('change', saveApiKey);
 
 function truncateFilename(filename, maxLength) {
   if (filename.length <= maxLength) {
@@ -621,6 +695,9 @@ async function updateInputMaxLength() {
         resetImageUI();
     }
 }
+document.getElementById('file-search-input').addEventListener('change', function () {
+  filterFiles(false)
+});
 
 
 
@@ -657,6 +734,45 @@ async function updateAvailableFiles(dropdown, path = './') {
     }
   }
   await processDirectory(path);
+  filterFiles()
+}
+
+function filterFiles(reset = false) {
+  const searchInput = document.getElementById('file-search-input');
+  if (reset) {
+    searchInput.value = '';
+  }
+  const searchTerm = searchInput.value.toLowerCase();
+  const dropdown = document.getElementById('file-dropdown');
+  const options = dropdown.options;
+  let matchFound = false;
+
+  // Remove any existing "No matching files" option
+  const noMatchOption = dropdown.querySelector('option[value="no-match"]');
+  if (noMatchOption) {
+    dropdown.removeChild(noMatchOption);
+  }
+
+  for (let i = 0; i < options.length; i++) {
+    const option = options[i];
+    if (option.value === 'Choose file') continue; // Skip the default option
+    const optionText = option.value.toLowerCase();
+    if (searchTerm === '' || optionText.includes(searchTerm)) {
+      option.style.display = '';
+      matchFound = true;
+    } else {
+      option.style.display = 'none';
+    }
+  }
+
+  // If no matches found, add a disabled "No matching files" option
+  if (!matchFound && searchTerm !== '') {
+    const noMatchOption = document.createElement('option');
+    noMatchOption.textContent = 'No matching files';
+    noMatchOption.value = 'no-match';
+    noMatchOption.disabled = true;
+    dropdown.appendChild(noMatchOption);
+  }
 }
 
 
@@ -719,13 +835,13 @@ function addFileTab(filename, disableDelete = false) {
         updateAvailableFiles(dropdown, "./");
       }
       updateFileTabTitles();
+      filterFiles();
     };
   }
 
   useFiles[filename] = true;
   fileTab.appendChild(removeButton);
   tabsContainer.appendChild(fileTab);
-
 
   updateFileTabTitles();
 }
@@ -738,6 +854,7 @@ document.getElementById('file-dropdown').addEventListener('change', function() {
       const dropdown = document.getElementById('file-dropdown');
       if (dropdown) {
         updateAvailableFiles(dropdown, "./");
+        filterFiles();
       }
     }
 });
@@ -751,6 +868,9 @@ function toggleOptions(sectionId) {
       if (element.style.display === 'block') {
         element.classList.add('show-options');
         element.classList.remove('hide-options');
+        if (id === 'file-input-options') {
+          filterFiles(true);
+        }
       } else {
         element.classList.remove('show-options');
         element.classList.add('hide-options');
@@ -800,6 +920,7 @@ function closeAllOptions() {
     element.classList.remove('show-options');
     element.style.display = 'none', 500; 
   });
+  filterFiles(true);
 }
 
 
@@ -1101,6 +1222,10 @@ async function customModelUpdate() {
 
 setInterval(async function() {
   await customModelUpdate()
+  const dropdown = document.getElementById('file-dropdown');
+  if (dropdown) {
+    updateAvailableFiles(dropdown, "./");
+  }
 }, 60000);
 
 window.onload = function() {

@@ -866,10 +866,9 @@ input[type="text"]:focus, input[type="number"]:focus, textarea:focus {
   font-size: 13px;
 }
 
-#image-url-input {
+#image-url-input, #file-search-input {
   height: 16px !important;
   font-size: 13px;
-
 }
 
 .popclose {
@@ -996,4 +995,18 @@ input[type="text"]:focus, input[type="number"]:focus, textarea:focus {
 
 .lazy.loaded {
   opacity: 1;
+}
+
+.input-button-group {
+  display: flex;
+  width: 100%;
+}
+
+#file-search-input {
+  flex: 1;
+  margin-right: 5px;
+}
+
+#file-dropdown {
+  flex: 2;
 }
