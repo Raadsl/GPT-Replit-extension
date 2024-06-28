@@ -44,7 +44,6 @@
       }
       await updateTheme()
       await replit.themes.onThemeChange(updateTheme)
-      const currentfile = await replit.session.getActiveFile()
       const file = await replit.me.filePath();
       const dropdown = document.getElementById('file-dropdown');
       if (dropdown) {
@@ -53,7 +52,6 @@
         console.error('Dropdown element not found!');
       }
       
-
       if (file) {
         addMessage({ type: 'received-msg', text: `Hi there, how can I help you? You can ask questions about the ${file} file` },1);
         await replit.messages.showConfirm("Replit-GPT loaded", 1500);
@@ -65,6 +63,9 @@
           console.error('Dropdown element not found!');
         }
         //add api key
+        await loadApiKey();
+        console.log("API key (should) be loaded")
+
         const output = await replit.fs.readFile("./.env")
         if(output.content !== null) {
           const openAIKeyRegex = /OPENAI_API_KEY="(.+?)"/;
@@ -80,10 +81,11 @@
           }
         }
       } else {
-          
           addMessage({ type: 'received-msg', text: 'Hi there, how can I help you?' },1);
           await replit.messages.showConfirm("Replit-GPT loaded", 1500);
-          // add api key
+        
+          await loadApiKey();
+          console.log("API key (should) be loaded")
           const output = await replit.fs.readFile("./.env")
           if(output.content !== null) {
             const openAIKeyRegex = /OPENAI_API_KEY="(.+?)"/;
@@ -242,17 +244,4 @@
      <button class='button' id="save-settings-button">Save</button>
   </div>
 </div>
-<div id="file-popup" class="popup" aria-labelledby="file-popup">
-  <div class="modal-content popup-content" aria-labelledby="file-popup">
-    <span id='close-popup' class="popclose close">&times;</span>
-    <div class="input-button-group">
-      <select id="file-dropdown" class="form-control" aria-label="Select file dropdown">
-      </select>
-      <button id="file-select-btn" class="button">Open</button>
-    </div>
-    <p id="file-warning" class="file-warning">With each file you add, the average characters that are read from your files will decrease to match the character limit of your .</p>
-  </div>
-</div>
-
-
 </html>

@@ -418,6 +418,7 @@ a::before{
 /*LOADING BAR */
 #loading-screen {
   transition: opacity 0.4s ease-in-out;
+  cursor: wait;
 }
 
 #loading-screen .description {
@@ -972,6 +973,7 @@ input[type="text"]:focus, input[type="number"]:focus, textarea:focus {
 
 .dot {
   display: inline-block;
+  cursor: wait;
   width: 8px;
   height: 8px;
   margin: 0 2px;
