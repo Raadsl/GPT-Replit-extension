@@ -41,7 +41,7 @@
 
     {
       "title": "Analyse images",
-      "body": "You can upload images to the AI which the AI can analyze, you can use this to make your request more clear or can be used for a lot of other things. It compresses the uploaded image so that the request will not cost as much.",
+      "body": "You can upload images to the AI which the AI can analyze, you can use this to make your request more clear or can be used for a lot of other things. It compresses the uploaded image so that the request will not cost as much. It is also possible to use local images on the repl you are, in by starting your URl with `replit://`. Example: `replit://image.png`.",
       "image": "/coverpageImg1.png"
   },
 

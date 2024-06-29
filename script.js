@@ -977,58 +977,101 @@ async function compressToWebP(base64Data) {
 
 
 async function useImageUrl() {
-    const imageUrl = document.getElementById('image-url-input').value;
-    if (!imageUrl) {
-        alert("Please enter a URL");
-        return;
-    }
+  const imageUrl = document.getElementById('image-url-input').value;
+  if (!imageUrl) {
+    alert("Please enter a URL");
+    return;
+  }
 
+  if (imageUrl.startsWith("replit://") ) {
+    const localFilePath = imageUrl.replace("replit://", "./");
+    try {
+      const fileContent = await replit.fs.readFile(localFilePath, "base64");
+
+      if (fileContent.error) {
+        throw new Error(fileContent.error);
+      }
+
+      const uint8Array = fileContent.content.asBuffer;
+      const base64data = `data:image/png;base64,${arrayBufferToBase64(uint8Array)}`;
+      const compressedWebPBase64 = await compressToWebP(base64data);
+
+      loadImagePreview(compressedWebPBase64);
+
+      if (typeof toggleOptions === "function") {
+        toggleOptions("image-input-options");
+      }
+      document.getElementById('image-url-input').value = '';
+    } catch (error) {
+      console.error("Failed to load or process local image:", error);
+      const UrlButton = document.getElementById("use-image-url-button");
+      UrlButton.disabled = true;
+      UrlButton.innerText = "Failed loading image";
+      setTimeout(function() {
+        UrlButton.disabled = false;
+        UrlButton.innerText = "Use URL";
+      }, 2500);
+      return;
+    }
+  } else {
     const regex = /^(https?:\/\/)?([\w-]+(\.[\w-]+)+)([^#\s]*)?$/i;
     if (!imageUrl.match(regex)) {
-        const UrlButton = document.getElementById("use-image-url-button")
-        UrlButton.disabled = true
-        UrlButton.innerText = "Invalid URL"
-        setTimeout(function() {
-            UrlButton.disabled = false
-            UrlButton.innerText = "Use URL"
-        }, 1500)
-      return
+      const UrlButton = document.getElementById("use-image-url-button");
+      UrlButton.disabled = true;
+      UrlButton.innerText = "Invalid URL";
+      setTimeout(function() {
+        UrlButton.disabled = false;
+        UrlButton.innerText = "Use URL";
+      }, 1500);
+      return;
     }
 
     try {
-        const response = await fetch(imageUrl);
-        const blob = await response.blob();
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
 
-        const base64data = await blobToBase64(blob);
-        const compressedWebPBase64 = await compressToWebP(base64data);
+      const base64data = await blobToBase64(blob);
+      const compressedWebPBase64 = await compressToWebP(base64data);
 
-        loadImagePreview(compressedWebPBase64)
+      loadImagePreview(compressedWebPBase64);
 
-        if (typeof toggleOptions === "function") {
-            toggleOptions("image-input-options");
-        }
-        document.getElementById('image-url-input').value = '';
+      if (typeof toggleOptions === "function") {
+        toggleOptions("image-input-options");
+      }
+      document.getElementById('image-url-input').value = '';
     } catch (error) {
-        console.error("Failed to load or process image:", error);
-        const UrlButton = document.getElementById("use-image-url-button")
-          UrlButton.disabled = true
-          UrlButton.innerText = "Failed loading image"
-          setTimeout(function() {
-              UrlButton.disabled = false
-              UrlButton.innerText = "Use URL"
-          }, 2500)
-        return
+      console.error("Failed to load or process image:", error);
+      const UrlButton = document.getElementById("use-image-url-button");
+      UrlButton.disabled = true;
+      UrlButton.innerText = "Failed loading image";
+      setTimeout(function() {
+        UrlButton.disabled = false;
+        UrlButton.innerText = "Use URL";
+      }, 2500);
+      return;
     }
+  }
 }
 
-function blobToBase64(blob) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-    });
+function arrayBufferToBase64(buffer) {
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
 }
+
+async function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
 
 function loadImagePreview(base64Src) {
   const uploadButton = document.getElementById('upload-image-button');
