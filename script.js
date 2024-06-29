@@ -1189,27 +1189,9 @@ function lazyLoadImages() {
   });
 }
 
-function renderVisibleMessages() {
-  const scrollTop = chatMessages.scrollTop;
-  const startIndex = Math.floor(scrollTop / messageHeight);
-  const endIndex = startIndex + visibleMessages;
+document.addEventListener('scroll', lazyLoadImages);
 
-  // Clear current messages
-  chatMessages.innerHTML = '';
 
-  // Render only visible messages
-  for (let i = startIndex; i < endIndex && i < allMessages.length; i++) {
-    const messageElement = createMessageElement(allMessages[i]);
-    chatMessages.appendChild(messageElement);
-  }
-}
-
-let scrollTimeout;
-chatMessages.addEventListener('scroll', () => {
-  if (scrollTimeout) clearTimeout(scrollTimeout);
-  scrollTimeout = setTimeout(renderVisibleMessages, 100);
-  lazyLoadImages();
-});
 
 
 async function customModelUpdate() {
