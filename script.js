@@ -137,7 +137,6 @@ function addMessage(x, id = null) {
   const chatMessages = document.getElementById('chat-messages');
   const isNearBottom = chatMessages.scrollHeight - chatMessages.clientHeight - chatMessages.scrollTop < 60;
   let messageDiv = null;
-  const maxLength = 5000; 
   if (id !== null) {
     messageDiv = document.getElementById(`message-${id}`);
   }
@@ -150,26 +149,12 @@ function addMessage(x, id = null) {
     
     chatMessages.appendChild(messageDiv);
   }
-  messageDiv.dataset.fullText = x.text;
-  if (x.text.length > maxLength && x.type == "user-msg") {
-    const truncatedText = x.text.substring(0, maxLength) + '...';
-    const readMoreButton = document.createElement('button');
-    readMoreButton.innerText = 'Read More';
-    readMoreButton.classList.add('button');
-    readMoreButton.onclick = () => {
-      messageDiv.innerHTML = DOMPurify.sanitize(marked.parse((x.text), { mangle: false, headerIds: false }), { USE_PROFILES: { html: true } });
-      MathJax.typesetPromise([messageDiv]);
-      hljs.highlightAll();
-    };
-    messageDiv.innerHTML = DOMPurify.sanitize(marked.parse((truncatedText), { mangle: false, headerIds: false }), { USE_PROFILES: { html: true } });
-    messageDiv.appendChild(readMoreButton);
+  if (!x.noMD) {
+    messageDiv.innerHTML = DOMPurify.sanitize(marked.parse((x.text), { mangle: false, headerIds: false }), { USE_PROFILES: { html: true } });
   } else {
-    if (!x.noMD) {
-      messageDiv.innerHTML = DOMPurify.sanitize(marked.parse((x.text), { mangle: false, headerIds: false }), { USE_PROFILES: { html: true } });
-    } else {
-      messageDiv.innerHTML = DOMPurify.sanitize(x.text, { USE_PROFILES: { html: true } });
-    }
+    messageDiv.innerHTML = DOMPurify.sanitize(x.text, { USE_PROFILES: { html: true } });
   }
+  
 
 
   MathJax.typesetPromise([messageDiv])
@@ -499,7 +484,7 @@ async function processResponse(response) {
 
     for (const messageElement of chatMessages) {
       // Read the full message text from the data attribute
-      let messageText = messageElement.dataset.fullText.trim();
+      let messageText = messageElement.innerText.trim();
 
       const messageContents = [];
       const images = messageElement.getElementsByClassName('user-upload-image');
@@ -557,6 +542,10 @@ async function getEncryptionKey() {
     return user.id.toString() + "GPT-REPLIT-SALT";
   } catch (error) {
     console.error("Error fetching user data:", error);
+    if (lastID.getencryption) {
+      await replit.messages.hideMessage(lastID.getencryption)
+    }
+    lastID.getencryption = await replit.messages.showError("Error fetching user data using Replit's API. Please try again later. OPENAI API key may not be loaded correctly", 5500)
     return "DEFAULT-ENCRYPTION-KEY-GPTREPLSLT";
   }
 }
