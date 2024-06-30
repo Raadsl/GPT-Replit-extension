@@ -121,7 +121,7 @@ header {
 }
 
 
-#voice-input-button, #clear-messages-button, #settings-btn, .regenerate-button, #file-select-btn {
+#voice-input-button, #clear-messages-button, #settings-btn, .regenerate-button, #file-select-btn, #toggle-api-key-visibility {
   background: var(--accent-primary-dimmer, #0077ff);
   border: none;
   border-radius: 4px;
@@ -131,7 +131,7 @@ header {
   padding: 8px 16px;
   transition: all 0.3s ease-in-out;
 }
-#voice-input-button:hover, #clear-messages-button:hover, #settings-btn:hover, .regenerate-button {
+#voice-input-button:hover, #clear-messages-button:hover, #settings-btn:hover, .regenerate-button:hover, #toggle-api-key-visibility:hover  {
   background: var(--accent-primary-default, #0066db);
 }
 
@@ -403,7 +403,8 @@ a::before{
   #voice-input-button,
   #clear-messages-button,
   #settings-btn,
-  #mode {
+  #mode,
+  #toggle-api-key-visibility{
     flex: 1 1 calc(50% - 5px);
     margin-bottom: 10px; 
   }

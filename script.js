@@ -982,6 +982,20 @@ document.getElementById('image-url-input').addEventListener('paste', async funct
   }
 });
 
+document.getElementById('toggle-api-key-visibility').addEventListener('click', function() {
+  const apiKeyInput = document.getElementById('KEY');
+  const toggleButton = document.getElementById('toggle-api-key-visibility');
+
+  if (apiKeyInput.type === 'password') {
+    apiKeyInput.type = 'text';
+    toggleButton.innerHTML = '<i class="fas fa-eye-slash"></i>';
+  } else {
+    apiKeyInput.type = 'password';
+    toggleButton.innerHTML = '<i class="fas fa-eye"></i>';
+  }
+});
+
+
 async function useImageUrl() {
   const imageUrl = document.getElementById('image-url-input').value;
   if (!imageUrl) {

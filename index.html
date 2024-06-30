@@ -119,12 +119,12 @@
     setTimeout(function() {
       loadingScreen.style.display = 'none';
     }, 450);
-  console.log("[Replit-GPT] loaded! V1.8.0")
+  console.log("[Replit-GPT] loaded! V1.8.1")
   </script>
 </head>
 <body>
   <div id="loading-screen" aria-labelledby="loading-screen">
-    <div title="We're initializing the extension" class="ring"> V1.8.0
+    <div title="We're initializing the extension" class="ring"> V1.8.1
       <circlespan></circlespan>
       <p>Initialising</p>
     </div>
@@ -181,6 +181,7 @@
     </div>
     <div class="user-input-container">
       <input type="password" id="KEY" placeholder="Enter your openAI API key." title="While we try to store your API key safely, it is still going through your browser's requests. Use at your own risk."></input>
+      <button id="toggle-api-key-visibility" type="button" title="Toggle API key visibility"><i class="fas fa-eye"></i></button>
       <button title='Clears the message history' id="clear-messages-button"><i class="fas fa-trash-alt"></i></button>
       <button title="Opens the settings modal for extra customization" id="settings-btn"><i class="fa-solid fa-gear"></i></button>
       <button title="activates voice mode" id="voice-input-button"><i class="fas fa-microphone"></i></button>
