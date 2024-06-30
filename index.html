@@ -153,7 +153,7 @@
           <i class="fa-solid fa-image"></i>
       </button>
       <div id="image-input-options" style="display: none;">
-          <input title="Start with replit:// for local files. Ex: replit://image.png" type="text" id="image-url-input" placeholder="Enter Image URL or start with replit:// for local files" />
+          <input title="Start with replit:// for local files. Ex: replit://image.png or just paste image" type="text" id="image-url-input" placeholder="Enter Image URL, paste image or start with replit:// for local files" />
           <button id="use-image-url-button" onclick="useImageUrl();" style="border-radius: 4px 1px 1px 4px;">Use URL</button>
           <input type="file" id="image-file-input" accept="image/*" style="display: none;"/>
           <button id="select-image-button" onclick="document.getElementById('image-file-input').click();" style="border-radius: 1px 4px 4px 1px;">Upload Image</button>
@@ -238,7 +238,7 @@
     <option value="api.pawan.krd">PAI</option>
   </select>
     </label>
-    <p class="description">PAI server only works with GPT-4. For more information about the PAI server, you can look <a class="description" href="https://discord.pawan.krd/" target="_blank">here</a>.</p>
+    <p class="description">PAI server only works with some models. For more information about the PAI server, you can look <a class="description" href="https://discord.pawan.krd/" target="_blank">here</a>.</p>
     <hr />
      <button class='button' id="reset-settings-button">Reset Settings</button>
      <button class='button' id="save-settings-button">Save</button>

@@ -964,6 +964,23 @@ async function compressToWebP(base64Data) {
     });
 }
 
+document.getElementById('image-url-input').addEventListener('paste', async function(event) {
+  const items = (event.clipboardData || event.originalEvent.clipboardData).items;
+  for (const item of items) {
+    if (item.kind === 'file' && item.type.startsWith('image/')) {
+      const blob = item.getAsFile();
+      const base64String = await blobToBase64(blob);
+      const compressedWebPBase64 = await compressToWebP(base64String);
+      loadImagePreview(compressedWebPBase64);
+      toggleOptions("image-input-options");
+      if (lastID.pasteimage) {
+        await replit.messages.hideMessage(lastID.pasteimage)
+      }
+      lastID.pasteimage = await replit.messages.showConfirm("Successfully uploaded image from clipboard", 2000)
+      break; // We only handle one image at a time
+    }
+  }
+});
 
 async function useImageUrl() {
   const imageUrl = document.getElementById('image-url-input').value;
@@ -991,6 +1008,10 @@ async function useImageUrl() {
         toggleOptions("image-input-options");
       }
       document.getElementById('image-url-input').value = '';
+      if (lastID.uplaodloccalfile) {
+        await replit.messages.hideMessage(lastID.uplaodloccalfile)
+      }
+      lastID.uplaodloccalfile = await replit.messages.showConfirm("Successfully uploaded local iamge", 2000)
     } catch (error) {
       console.error("Failed to load or process local image:", error);
       const UrlButton = document.getElementById("use-image-url-button");
@@ -1028,6 +1049,10 @@ async function useImageUrl() {
         toggleOptions("image-input-options");
       }
       document.getElementById('image-url-input').value = '';
+      if (lastID.uplaodloccalfile) {
+        await replit.messages.hideMessage(lastID.uplaodloccalfile)
+      }
+      lastID.uplaodloccalfile = await replit.messages.showConfirm("Successfully uploaded image", 2000)
     } catch (error) {
       console.error("Failed to load or process image:", error);
       const UrlButton = document.getElementById("use-image-url-button");
