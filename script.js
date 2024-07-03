@@ -777,39 +777,75 @@ function updateFileTabTitles() {
     const maxFileTabs = Math.floor((maxContent / numFiles) - 1000);
     fileTabs.forEach(tab => {
       const filename = tab.id.replace('file-tab-', '');
-      
-      tab.title = `GPT-Replit has opened the file '${filename}'. 
+      let disabledMessage = '';
+      if(tab.classList.contains('disabled')) {
+           disabledMessage = `, and since you opened the extension with this file it cannot be removed`;
+      } 
+      tab.title = `GPT-Replit has opened the file '${filename}'${disabledMessage}. 
 The AI only will read the first '${maxFileTabs}' characters'`;
     });
   }
 }
-
 function addFileTab(filename, disableDelete = false) {
   const tabsContainer = document.querySelector('.files-tabs-container');
   const fileTab = document.createElement('div');
   fileTab.classList.add('file-tab');
+  if (disableDelete) {
+    fileTab.classList.add('disabled');
+  }
   fileTab.id = `file-tab-${filename}`;
   fileTab.title = `GPT-replit has opened the file ${filename}`;
-  fileTab.setAttribute('draggable', 'true');
+  if (!disableDelete) {
+    fileTab.setAttribute('draggable', 'true');
+  }
   const displayName = filename.replace(/^\.\//, '');
   const truncatedFilename = truncateFilename(displayName, 20);
   fileTab.textContent = truncatedFilename;
 
   // Handle dragging
-  if (!disableDelete) {
-    fileTab.addEventListener('dragstart', (event) => {
+  fileTab.addEventListener('dragstart', (event) => {
+    if (!disableDelete) {
       event.dataTransfer.setData('text/plain', fileTab.id);
       document.getElementById('add-file-button').classList.add('trash');
       document.getElementById('add-file-button').innerHTML = '<i class="fas fa-trash-alt"></i>';
-    });
+      fileTab.classList.add('dragging');
+    }
+  });
 
-    fileTab.addEventListener('dragend', (event) => {
+  fileTab.addEventListener('dragend', (event) => {
+    if (!disableDelete) {
       document.getElementById('add-file-button').classList.remove('trash');
       document.getElementById('add-file-button').innerHTML = '<i class="fa-solid fa-plus"></i>';
-    });
+      fileTab.classList.remove('dragging');
+      updateUseFilesOrder();
+    }
+  });
 
+  tabsContainer.addEventListener('dragover', (event) => {
+    event.preventDefault();
+    const draggingElement = document.querySelector('.dragging');
+    const afterElement = getDragAfterElement(tabsContainer, event.clientX);
+    if (afterElement == null || afterElement.classList.contains('disabled')) {
+      tabsContainer.appendChild(draggingElement);
+    } else {
+      tabsContainer.insertBefore(draggingElement, afterElement);
+    }
+  });
 
-  }
+  // Handle middle-click deletion
+  fileTab.addEventListener('auxclick', function (event) {
+    if (event.button === 1 && !disableDelete) { // middle-click
+      fileTab.classList.add('delete-animation');
+      setTimeout(() => tabsContainer.removeChild(fileTab), 500);
+      useFiles[filename] = false;
+      const dropdown = document.getElementById('file-dropdown');
+      if (dropdown) {
+        updateAvailableFiles(dropdown, "./");
+      }
+      updateFileTabTitles();
+      filterFiles();
+    }
+  });
 
   const removeButton = document.createElement('button');
   removeButton.innerHTML = '&times;';
@@ -817,9 +853,10 @@ function addFileTab(filename, disableDelete = false) {
   removeButton.className = "remove-file-button";
   if (disableDelete) {
     removeButton.disabled = true;
+    removeButton.title = "Cannot remove this file.";
   } else {
     removeButton.onclick = function () {
-      fileTab.classList.add('delete-animation')
+      fileTab.classList.add('delete-animation');
       setTimeout(() => tabsContainer.removeChild(fileTab), 500);
       useFiles[filename] = false;
       const dropdown = document.getElementById('file-dropdown');
@@ -831,12 +868,117 @@ function addFileTab(filename, disableDelete = false) {
     };
   }
 
+  // Handle middle-click deletion
+  fileTab.addEventListener('auxclick', function (event) {
+    if (event.button === 1 && !disableDelete) { // middle-click
+      fileTab.classList.add('delete-animation');
+      setTimeout(() => tabsContainer.removeChild(fileTab), 500);
+      useFiles[filename] = false;
+      const dropdown = document.getElementById('file-dropdown');
+      if (dropdown) {
+        updateAvailableFiles(dropdown, "./");
+      }
+      updateFileTabTitles();
+      filterFiles();
+    }
+  });
+
   useFiles[filename] = true;
   fileTab.appendChild(removeButton);
   tabsContainer.appendChild(fileTab);
 
   updateFileTabTitles();
 }
+
+function getDragAfterElement(container, x) {
+  const draggableElements = [...container.querySelectorAll('.file-tab:not(.dragging):not(.disabled)')];
+
+  return draggableElements.reduce((closest, child) => {
+    const box = child.getBoundingClientRect();
+    const offset = x - box.left - box.width / 2;
+    if (offset < 0 && offset > closest.offset) {
+      return { offset: offset, element: child };
+    } else {
+      return closest;
+    }
+  }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+
+function updateUseFilesOrder() {
+  const tabsContainer = document.querySelector('.files-tabs-container');
+  const fileTabs = tabsContainer.querySelectorAll('.file-tab');
+  const newUseFiles = {};
+
+  fileTabs.forEach(tab => {
+    const filename = tab.id.replace('file-tab-', '');
+    newUseFiles[filename] = useFiles[filename];
+  });
+
+  console.log(useFiles, newUseFiles);
+  Object.assign(useFiles, newUseFiles);
+}
+
+document.getElementById('add-file-button').addEventListener('dragover', function(event) {
+  event.preventDefault();
+});
+
+document.getElementById('add-file-button').addEventListener('drop', function(event) {
+  event.preventDefault();
+
+  const id = event.dataTransfer.getData('text/plain');
+  const fileTab = document.getElementById(id);
+
+  if (fileTab) {
+    const filename = fileTab.id.replace('file-tab-', '');
+    useFiles[filename] = false; 
+    fileTab.parentNode.removeChild(fileTab);
+    const dropdown = document.getElementById('file-dropdown');
+    if (dropdown) {
+      updateAvailableFiles(dropdown, "./");
+    }
+    updateFileTabTitles();
+  }
+});
+
+
+function updateUseFilesOrder() {
+  const tabsContainer = document.querySelector('.files-tabs-container');
+  const fileTabs = tabsContainer.querySelectorAll('.file-tab');
+  const newUseFiles = {};
+
+  fileTabs.forEach(tab => {
+    const filename = tab.id.replace('file-tab-', '');
+    newUseFiles[filename] = useFiles[filename];
+  });
+
+  console.log(useFiles, newUseFiles)
+  Object.assign(useFiles, newUseFiles);
+}
+
+
+document.getElementById('add-file-button').addEventListener('dragover', function(event) {
+  event.preventDefault();
+});
+
+document.getElementById('add-file-button').addEventListener('drop', function(event) {
+  event.preventDefault();
+
+  const id = event.dataTransfer.getData('text/plain');
+  const fileTab = document.getElementById(id);
+
+  if (fileTab) {
+    const filename = fileTab.id.replace('file-tab-', '');
+    useFiles[filename] = false; 
+    fileTab.parentNode.removeChild(fileTab);
+    const dropdown = document.getElementById('file-dropdown');
+    if (dropdown) {
+      updateAvailableFiles(dropdown, "./");
+    }
+    updateFileTabTitles();
+  }
+});
+
 
 document.getElementById('file-dropdown').addEventListener('change', function() {
     const selectedFile = this.value;
@@ -981,19 +1123,46 @@ document.getElementById('image-url-input').addEventListener('paste', async funct
     }
   }
 });
-
-document.getElementById('toggle-api-key-visibility').addEventListener('click', function() {
+let apiKeyTimerInterval = null;
+document.getElementById('toggle-api-key-visibility').addEventListener('click', async function() {
   const apiKeyInput = document.getElementById('KEY');
+  const viewApiKeyInput = document.getElementById('view-api-key-input');
+  const apiKeyLabelAndInput = document.getElementById('api-key-label');
   const toggleButton = document.getElementById('toggle-api-key-visibility');
 
-  if (apiKeyInput.type === 'password') {
-    apiKeyInput.type = 'text';
-    toggleButton.innerHTML = '<i class="fas fa-eye-slash"></i>';
-  } else {
-    apiKeyInput.type = 'password';
-    toggleButton.innerHTML = '<i class="fas fa-eye"></i>';
+  let timer = 60; // Set the timer to 30 seconds initially
+
+  viewApiKeyInput.value = apiKeyInput.value;
+  apiKeyLabelAndInput.style.display = 'block';
+  toggleButton.style.display = 'none';
+  if (lastID.apiKeyVisibility) {
+    replit.messages.hideMessage(lastID.apiKeyVisibility);
   }
+  lastID.apiKeyVisibility = replit.messages.showNotice(`API key is now visible for ${timer} seconds`, 1500);
+  // Update the timer every second
+  apiKeyTimerInterval= setInterval(() => {
+    timer--;
+    viewApiKeyInput.title = `Input hides in ${timer} seconds`;
+
+    if (timer <= 0) {
+      clearInterval(apiKeyTimerInterval);
+      apiKeyLabelAndInput.style.display = 'none';
+      toggleButton.style.display = 'block';
+      if (lastID.apiKeyVisibility) {
+        replit.messages.hideMessage(lastID.apiKeyVisibility);
+      }
+      lastID.apiKeyVisibility = replit.messages.showNotice("API key is now hidden", 1500);
+    }
+  }, 1000);
 });
+
+document.getElementById('view-api-key-input').addEventListener('input', function() {
+  const apiKeyInput = document.getElementById('KEY');
+  apiKeyInput.value = this.value;
+  saveApiKey();
+});
+
+
 
 
 async function useImageUrl() {
@@ -1224,11 +1393,33 @@ document.getElementById('settings-btn').addEventListener('click', async () => {
     document.getElementById('copy-button').checked = settings.hasOwnProperty('copyButton') ? settings.copyButton : true;
     document.getElementById('noyap-btn').checked = settings.hasOwnProperty('noyap') ? settings.noyap : true;
 
+    const useCheckbox = document.getElementById('use');
+    const isChecked = useCheckbox.checked;
+    document.getElementById('temperature').disabled = !isChecked;
+    document.getElementById('model').disabled = !isChecked;
+    document.getElementById('custom-server').disabled = !isChecked;
+
+    clearInterval(apiKeyTimerInterval);
+    document.getElementById('api-key-label').style.display = 'none';
+    document.getElementById('toggle-api-key-visibility').style.display = 'block';
+
 
   }
   document.getElementById('settings-modal').style.display = 'block';
 });
 
+document.getElementById('temperature').addEventListener('input', function() {
+  document.getElementById('temperature-value').innerText = this.value;
+});
+
+document.getElementById('use').addEventListener('change', function() {
+  const isChecked = this.checked;
+  document.getElementById('temperature').disabled = !isChecked;
+  document.getElementById('model').disabled = !isChecked;
+  document.getElementById('custom-server').disabled = !isChecked;
+});
+
+// Ensure the slider value is saved correctly when settings are saved
 document.getElementById('save-settings-button').addEventListener('click', async () => {
   const settings = {
     used: document.getElementById('use').checked,
@@ -1238,15 +1429,16 @@ document.getElementById('save-settings-button').addEventListener('click', async 
     noyap: document.getElementById('noyap-btn').checked,
     server: document.getElementById('custom-server').value,
   };
-  saveSettings(settings)
+  saveSettings(settings);
 
   if (lastID.save) {
-    await replit.messages.hideMessage(lastID.save)
+    await replit.messages.hideMessage(lastID.save);
   }
-  lastID.save = await replit.messages.showNotice("Saved custom settings", 1500)
+  lastID.save = await replit.messages.showNotice("Saved custom settings", 1500);
   modal.style.display = "none";
   await customModelUpdate();
 });
+
 
 function lazyLoadImages() {
   const lazyImages = document.querySelectorAll('img.lazy');
@@ -1296,6 +1488,15 @@ async function customModelUpdate() {
   }
 }
 
+function updateMemoryUsage() {
+  if (performance.memory) {
+    const memoryUsage = performance.memory.usedJSHeapSize / 1024 / 1024; // Convert bytes to MB
+    document.getElementById('memory-usage').innerText = `Current Memory Usage: ${memoryUsage.toFixed(2)} MB`;
+  } else {
+    document.getElementById('memory-usage').innerText = '';
+  }
+}
+
 setInterval(async function() {
   await customModelUpdate()
   const dropdown = document.getElementById('file-dropdown');
@@ -1303,6 +1504,7 @@ setInterval(async function() {
     updateAvailableFiles(dropdown, "./");
   }
 }, 60000);
+setInterval(updateMemoryUsage, 1000);
 
 window.onload = function() {
   customModelUpdate();
@@ -1312,3 +1514,7 @@ window.onload = function() {
 
 const modeSelector = document.getElementById("mode");
 modeSelector.addEventListener("change", updateInputMaxLength);
+
+
+
+ // Update every second

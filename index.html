@@ -51,7 +51,7 @@
       } else {
         console.error('Dropdown element not found!');
       }
-      
+      await loadApiKey();
       if (file) {
         addMessage({ type: 'received-msg', text: `Hi there, how can I help you? You can ask questions about the ${file} file` },1);
         await replit.messages.showConfirm("Replit-GPT loaded", 1500);
@@ -62,8 +62,7 @@
         } else {
           console.error('Dropdown element not found!');
         }
-        //add api key
-        await loadApiKey();
+        
         console.log("API key (should) be loaded")
 
         const output = await replit.fs.readFile("./.env")
@@ -84,7 +83,6 @@
           addMessage({ type: 'received-msg', text: 'Hi there, how can I help you?' },1);
           await replit.messages.showConfirm("Replit-GPT loaded", 1500);
         
-          await loadApiKey();
           console.log("API key (should) be loaded")
           const output = await replit.fs.readFile("./.env")
           if(output.content !== null) {
@@ -119,12 +117,12 @@
     setTimeout(function() {
       loadingScreen.style.display = 'none';
     }, 450);
-  console.log("[Replit-GPT] loaded! V1.8.1")
+  console.log("[Replit-GPT] loaded! V1.8.2")
   </script>
 </head>
 <body>
   <div id="loading-screen" aria-labelledby="loading-screen">
-    <div title="We're initializing the extension" class="ring"> V1.8.1
+    <div title="We're initializing the extension" class="ring"> V1.8.2
       <circlespan></circlespan>
       <p>Initialising</p>
     </div>
@@ -181,7 +179,6 @@
     </div>
     <div class="user-input-container">
       <input type="password" id="KEY" placeholder="Enter your openAI API key." title="While we try to store your API key safely, it is still going through your browser's requests. Use at your own risk."></input>
-      <button id="toggle-api-key-visibility" type="button" title="Toggle API key visibility"><i class="fas fa-eye"></i></button>
       <button title='Clears the message history' id="clear-messages-button"><i class="fas fa-trash-alt"></i></button>
       <button title="Opens the settings modal for extra customization" id="settings-btn"><i class="fa-solid fa-gear"></i></button>
       <button title="activates voice mode" id="voice-input-button"><i class="fas fa-microphone"></i></button>
@@ -209,11 +206,23 @@
       <input id='use' type="checkbox">
       <span class="checkbox-mark"></span>
     </label>
-    <label title='The higher the temperature, the more creative the bot is' for="temperature">Temperature:</label>
-    <input title='The higher the temperature, the more creative the bot is' type="number" id="temperature" placeholder="0.7..">
+    <label title='The higher the temperature, the more creative the bot is' for="temperature">Temperature: <span id="temperature-value">0.7</span></label>
+    <input title='The higher the temperature, the more creative the bot is' type="range" id="temperature" min="0" max="2" step="0.1" value="0.7">
+    
+
 
     <label title="Which model the extension will use, if you check use custom variables this model will be used" for="model">Model:</label>
     <input title="Which model the extension will use, if you check use custom variables this model will be used" type="text" id="model" placeholder="gpt-...">
+
+    <label title="Only for advanced users">
+      Server:
+      <select title="custom server" id="custom-server">
+        <option value="api.openai.com" selected>Default (openAI)</option>
+        <option value="api.pawan.krd">PAI</option>
+      </select>
+    </label>
+    <p class="description">PAI server only works with some models. For more information about the PAI server, you can look <a class="description" href="https://discord.pawan.krd/" target="_blank">here</a>.</p>
+
     <hr />
     <label title='Use a copy button on codeblocks instead of the double-click to copy system.'  class="checkbox-container">
       Copy button on codeblocks
@@ -232,17 +241,19 @@
         <span class="checkbox-mark"></span>
     </label>
     -->
-    <label title="Only for advanced users">
-  Server:
-  <select title="custom server" id="custom-server">
-    <option value="api.openai.com" selected>Default (openAI)</option>
-    <option value="api.pawan.krd">PAI</option>
-  </select>
-    </label>
-    <p class="description">PAI server only works with some models. For more information about the PAI server, you can look <a class="description" href="https://discord.pawan.krd/" target="_blank">here</a>.</p>
     <hr />
-     <button class='button' id="reset-settings-button">Reset Settings</button>
-     <button class='button' id="save-settings-button">Save</button>
+    <div id="memory-usage"></div>
+
+    <button class='button' id="toggle-api-key-visibility" type="button" title="Shows an input of the API key that is linked to the normal key input, but is viewable">View API Key</button>
+    <label style="display: none;" id='api-key-label'>
+      Api key:
+      <input type="text" id="view-api-key-input" placeholder="API Key" />
+    </label>
+
+
+    <hr />
+    <button class='button' id="reset-settings-button">Reset Settings</button>
+    <button class='button' id="save-settings-button">Save</button>
   </div>
 </div>
   
