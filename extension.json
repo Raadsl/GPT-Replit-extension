@@ -35,7 +35,7 @@
     },
     {
       "title": "Chat with GPT using different models.",
-      "body": "You can choose with which models you want to talk to. We have some preset, `GPT-4o`, `GPT-4 Turbo`, `GPT-4`, `GPT-4 32K` and `GPT3.5 Turbo`, but you can enter other models.",
+      "body": "You can choose with which models you want to talk to. We have some preset, `GPT-4o`, `GPT-4 Turbo`, `GPT-4`, `GPT-4 32K` and `GPT-3.5 Turbo`, but you can enter other models.",
       "image": "/coverpageImg2.png"
   },
 

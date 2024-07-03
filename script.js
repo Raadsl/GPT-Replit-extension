@@ -318,7 +318,6 @@ async function fetchAssistantResponse(apiKey, mode, history, temperature, server
     if (!response.ok) {
       console.log(`HTTP error! status: ${response.status}`)
     }
-    console.log(response)
     return response;
 
   } catch (error) {
@@ -472,51 +471,52 @@ async function processResponse(response) {
       }
     }
   }
+  console.log(response)
   toggleGenerating(false)
   messageCounter++;
 }
 
 
-  function extractMessages() {
-    const messageHistory = [];
-    const chatMessages = document.getElementById('chat-messages').children;
-    const mode = document.getElementById("mode").value; // Make sure this element exists and captures the current model
+function extractMessages() {
+  const messageHistory = [];
+  const chatMessages = document.getElementById('chat-messages').children;
+  const mode = document.getElementById("mode").value; // Make sure this element exists and captures the current model
 
-    for (const messageElement of chatMessages) {
-      // Read the full message text from the data attribute
-      let messageText = messageElement.innerText.trim();
+  for (const messageElement of chatMessages) {
+    // Read the full message text from the data attribute
+    let messageText = messageElement.innerText.trim();
 
-      const messageContents = [];
-      const images = messageElement.getElementsByClassName('user-upload-image');
+    const messageContents = [];
+    const images = messageElement.getElementsByClassName('user-upload-image');
 
-      if (multiModals.includes(mode) && images.length > 0) {
-        messageText += "[ image uploaded by user using another GPT model able to see images. ]";
-      }
-
-      messageContents.push({
-        type: 'text',
-        text: messageText
-      });
-
-      if (multiModals.includes(mode)) {
-        for (const img of images) {
-          messageContents.push({
-            type: 'image_url',
-            image_url: { url: img.src }
-          });
-        }
-      }
-
-      const messageObject = {
-        role: messageElement.classList.contains('user-msg') ? 'user' : (messageElement.classList.contains('system-msg') ? 'system' : 'assistant'),
-        content: messageContents
-      };
-
-      messageHistory.push(messageObject);
+    if (multiModals.includes(mode) && images.length > 0) {
+      messageText += "[ image uploaded by user using another GPT model able to see images. ]";
     }
 
-    return messageHistory;
+    messageContents.push({
+      type: 'text',
+      text: messageText
+    });
+
+    if (multiModals.includes(mode)) {
+      for (const img of images) {
+        messageContents.push({
+          type: 'image_url',
+          image_url: { url: img.src }
+        });
+      }
+    }
+
+    const messageObject = {
+      role: messageElement.classList.contains('user-msg') ? 'user' : (messageElement.classList.contains('system-msg') ? 'system' : 'assistant'),
+      content: messageContents
+    };
+
+    messageHistory.push(messageObject);
   }
+
+  return messageHistory;
+}
 
 
 
