@@ -318,6 +318,7 @@ async function fetchAssistantResponse(apiKey, mode, history, temperature, server
     if (!response.ok) {
       console.log(`HTTP error! status: ${response.status}`)
     }
+    console.log(response)
     return response;
 
   } catch (error) {
@@ -1166,9 +1167,15 @@ document.getElementById('view-api-key-input').addEventListener('input', function
 
 
 async function useImageUrl() {
+  const UrlButton = document.getElementById("use-image-url-button");
   const imageUrl = document.getElementById('image-url-input').value;
   if (!imageUrl) {
-    alert("Please enter a URL");
+    UrlButton.disabled = true;
+    UrlButton.innerText = "Please enter an URL";
+    setTimeout(function() {
+      UrlButton.disabled = false;
+      UrlButton.innerText = "Use URL";
+    }, 2500);
     return;
   }
 
@@ -1197,7 +1204,7 @@ async function useImageUrl() {
       lastID.uplaodloccalfile = await replit.messages.showConfirm("Successfully uploaded local iamge", 2000)
     } catch (error) {
       console.error("Failed to load or process local image:", error);
-      const UrlButton = document.getElementById("use-image-url-button");
+      
       UrlButton.disabled = true;
       UrlButton.innerText = "Failed loading image";
       setTimeout(function() {
