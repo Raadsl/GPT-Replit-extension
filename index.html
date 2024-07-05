@@ -101,6 +101,7 @@
     }
     catch(err) { 
       console.error(`Not opened as extension, ${err}`)
+      await loadApiKey();
       addMessage({ type: 'received-msg', text: 'Hi there, how can I help you? I was made to be a Replit extension but you can also just use me in the browser!' },1);
       const addFileButton = document.getElementById('add-file-button');
       const uploadImageButton = document.getElementById('upload-image-button');

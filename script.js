@@ -318,7 +318,6 @@ async function fetchAssistantResponse(apiKey, mode, history, temperature, server
     if (!response.ok) {
       console.log(`HTTP error! status: ${response.status}`)
     }
-    console.log(response)
     return response;
 
   } catch (error) {
@@ -472,7 +471,6 @@ async function processResponse(response) {
       }
     }
   }
-  console.log(response)
   toggleGenerating(false)
   messageCounter++;
 }
@@ -542,7 +540,7 @@ async function getEncryptionKey() {
     const { user } = await replit.data.currentUser({});
     return user.id.toString() + "GPT-REPLIT-SALT";
   } catch (error) {
-    console.error("Error fetching user data:", error);
+    console.error("Error fetching user data (probably not opened as extension):", error);
     if (lastID.getencryption) {
       await replit.messages.hideMessage(lastID.getencryption)
     }
@@ -916,7 +914,6 @@ function updateUseFilesOrder() {
     newUseFiles[filename] = useFiles[filename];
   });
 
-  console.log(useFiles, newUseFiles);
   Object.assign(useFiles, newUseFiles);
 }
 
@@ -953,7 +950,6 @@ function updateUseFilesOrder() {
     newUseFiles[filename] = useFiles[filename];
   });
 
-  console.log(useFiles, newUseFiles)
   Object.assign(useFiles, newUseFiles);
 }
 
