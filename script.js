@@ -7,7 +7,9 @@ let isGenerating = false;
 let voice = false;
 let lastID = {}
 const useFiles = {};
-const multiModals = ["gpt-4o", "gpt-4-turbo"]
+const multiModals = ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"]
+let chatMessageHistory = [];
+
 
 let clickTimer = null;
 
@@ -21,6 +23,7 @@ function escapeHtml(unsafe) {
   return DOMPurify.sanitize(clean, { USE_PROFILES: { html: true } });
 }
 
+
 async function copyCodeBlocks(codeBlock, event) {
   const textToCopy = codeBlock.textContent;
   const selection = window.getSelection();
@@ -32,7 +35,7 @@ async function copyCodeBlocks(codeBlock, event) {
 
   try {
     await navigator.clipboard.writeText(textToCopy);
-      triggerConfetti(event);
+    triggerConfetti(event);
     if (lastID.copy) {
       await replit.messages.hideMessage(lastID.copy);
     }
@@ -83,7 +86,7 @@ function getSelectedTextWithin(element) {
 }
 
 function exportMessageHistory() {
-  const messageHistory = extractMessages();
+  const messageHistory = extractMessages(true);
   const dataStr = JSON.stringify(messageHistory);
   const dataBlob = new Blob([dataStr], { type: 'application/json' });
   const url = URL.createObjectURL(dataBlob);
@@ -104,10 +107,10 @@ async function importMessageHistory(event) {
 
     messages.forEach(message => {
       if (message.role === "assistant") {
-        const messageText = message.content.map(part => part.text).join(" "); 
+        const messageText = message.content.map(part => part.text).join(" ");
         addMessage({ type: "received-msg", text: messageText });
       } else {
-        const messageText = message.content.map(part => part.text).join(" "); 
+        const messageText = message.content.map(part => part.text).join(" ");
         addMessage({ type: message.role + "-msg", text: messageText });
       }
     });
@@ -146,7 +149,7 @@ function addMessage(x, id = null) {
     if (id !== null) {
       messageDiv.id = `message-${id}`;
     }
-    
+
     chatMessages.appendChild(messageDiv);
   }
   if (!x.noMD) {
@@ -154,21 +157,18 @@ function addMessage(x, id = null) {
   } else {
     messageDiv.innerHTML = DOMPurify.sanitize(x.text, { USE_PROFILES: { html: true } });
   }
-  
 
-
-  MathJax.typesetPromise([messageDiv])
+  MathJax.typesetPromise([messageDiv]);
 
   const codeBlocks = messageDiv.querySelectorAll('pre code');
   codeBlocks.forEach((codeBlock, index) => {
-
     const settings = loadRawSettings();
     const copyButtonSetting = settings && settings.copyButton;
 
     const copyButton = document.createElement('button');
     copyButton.innerHTML = '<i class="fa-solid fa-copy"></i>';
     copyButton.classList.add('button');
-    copyButton.title = 'Click to copy'
+    copyButton.title = 'Click to copy';
     copyButton.style.position = 'absolute';
     copyButton.style.top = '0';
     copyButton.style.right = '0';
@@ -178,7 +178,6 @@ function addMessage(x, id = null) {
     footer.style.fontSize = '0.8em';
     footer.style.textAlign = 'right';
 
-
     if (copyButtonSetting) {
       copyButton.addEventListener('click', (event) => copyCodeBlocks(codeBlock, event));
       codeBlock.parentNode.style.position = 'relative';
@@ -187,15 +186,20 @@ function addMessage(x, id = null) {
       codeBlock.addEventListener('dblclick', (event) => copyCodeBlocks(codeBlock, event));
       codeBlock.parentNode.appendChild(footer);
     }
-
-
   });
+
+  const messageContents = [{ type: 'text', text: x.text }];
+
   if (x.image) {
     const img = document.createElement('img');
     img.src = x.image;
     img.classList.add("user-upload-image");
     img.alt = "User uploaded image";
     messageDiv.appendChild(img);
+    messageContents.push({
+      type: 'image_url',
+      image_url: { url: img.src }
+    });
     const container = document.getElementById('image-preview-container');
     container.style.display = 'none';
     base64Image = null;
@@ -206,11 +210,23 @@ function addMessage(x, id = null) {
     base64Image = null;
     document.getElementById('image-preview').src = '';
   }
+
   if (isNearBottom) {
     chatMessages.scrollTop = chatMessages.scrollHeight;
   }
   hljs.highlightAll();
+  const index = chatMessageHistory.findIndex(msg => msg.id === id);
+  if (index !== -1) {
+    chatMessageHistory[index].content = messageContents;
+  } else {
+    chatMessageHistory.push({
+      id: id,
+      role: x.type === 'user-msg' ? 'user' : (x.type === 'system-msg' ? 'system' : 'assistant'),
+      content: messageContents
+    });
+  }
 }
+
 
 function playAudio(audioUrl) {
   const audio = new Audio(audioUrl);
@@ -239,6 +255,7 @@ async function clearMessages() {
   while (chatMessages.firstChild) {
     chatMessages.removeChild(chatMessages.firstChild);
   }
+  chatMessageHistory = [];
 
   messageCounter = 1;
   if (lastID.clear) {
@@ -330,8 +347,8 @@ async function fetchAssistantResponse(apiKey, mode, history, temperature, server
 function toggleGenerating(value) {
   const headerBanner = document.getElementById("headerbanner")
   isGenerating = value
-  if(value == true) {
-      headerBanner.innerHTML = `<div id="loading-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`;
+  if (value == true) {
+    headerBanner.innerHTML = `<div id="loading-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`;
   } else {
     headerBanner.innerHTML = `GPT-Replit`;
   }
@@ -344,7 +361,7 @@ async function getResp() {
   stopButton.disabled = false;
   stopAI = false;
   toggleGenerating(true);
-  closeAllOptions()
+  closeAllOptions();
   const promptText = document.getElementById("user-message").value;
   if (promptText == "" || promptText == " ") {
     submit.disabled = false;
@@ -354,12 +371,11 @@ async function getResp() {
     return;
   }
   messageCounter++;
-  
+
   const messageId = messageCounter;
   const selectedMode = await getSelectedMode();
-  if(base64Image && multiModals.includes(selectedMode)) {
+  if (base64Image && multiModals.includes(selectedMode)) {
     addMessage({ type: 'user-msg', text: escapeHtml(promptText), noMD: true, image: base64Image }, messageId);
-    
   } else {
     addMessage({ type: 'user-msg', text: escapeHtml(promptText), noMD: true }, messageId);
   }
@@ -370,32 +386,39 @@ async function getResp() {
   if (yapsettings && yapsettings.hasOwnProperty("noyap") && yapsettings.noyap) {
     noyap = `No yapping, so keep your answers as short as possible. `;
   }
-  
-  let systemMessage = `You are a helpful programming assistant called Replit-GPT. ${noyap}`;
-  const fileContents = {};
-  const history = extractMessages();
-  if (Object.keys(useFiles).length > 0) {
-      let filesInfo = [];
-      for (const filePath in useFiles) {
-          if (useFiles[filePath]) {
-              let fileContent = await replit.fs.readFile(filePath, "utf8");
-              if (fileContent.error) {
-                  await replit.messages.showError(`Error reading file ${filePath}`, 2000);
-              } else {
-                  fileContents[filePath] = fileContent.content;
-                  let previewLength = Math.floor((maxContent / Object.keys(fileContents).length) - 1000);
-                  filesInfo.push(`- File path: ${filePath}\n- File Content Preview: \`\`\`${fileContent.content.substring(0, previewLength)}\`\`\``);
-              }
-          }
-      }
 
-      if (filesInfo.length > 0) {
-          systemMessage += " The user might ask something related to the contents of the following file(s):\n" + filesInfo.join('\n');
+  let systemMessage = `You are helpful programming assistant called Replit-GPT. ${noyap}`;
+  const fileContents = {};
+  let history = [...chatMessageHistory];
+  if (Object.keys(useFiles).length > 0) {
+    let filesInfo = [];
+    for (const filePath in useFiles) {
+      if (useFiles[filePath]) {
+        let fileContent = await replit.fs.readFile(filePath, "utf8");
+        if (fileContent.error) {
+          await replit.messages.showError(`Error reading file ${filePath}`, 2000);
+        } else {
+          fileContents[filePath] = fileContent.content;
+          let previewLength = Math.floor((maxContent / Object.keys(fileContents).length) - 1000);
+          filesInfo.push(`- File path: ${filePath}\n- File Content Preview: \`\`\`${fileContent.content.substring(0, previewLength)}\`\`\``);
+        }
       }
+    }
+
+    if (filesInfo.length > 0) {
+      systemMessage += " The user might ask something related to the contents of the following file(s):\n" + filesInfo.join('\n');
+    }
+  }
+
+  // Filter out images if the selected model is not multimodal
+  if (!multiModals.includes(selectedMode)) {
+    history = history.map(msg => {
+      const filteredContent = msg.content.filter(part => part.type !== 'image_url');
+      return { ...msg, content: filteredContent };
+    });
   }
 
   history.unshift({ role: "system", content: systemMessage });
-
 
   const mode = await getSelectedMode();
   const settings = loadRawSettings();
@@ -422,12 +445,14 @@ async function getResp() {
 
   submit.disabled = false;
   stopButton.disabled = true;
+  console.log(chatMessageHistory);
 }
 
 
 async function processResponse(response) {
   const reader = response.body.getReader();
   let result = '';
+  
   messageCounter++
   if (voice) {
     playAudio("woosh.mp3")
@@ -464,7 +489,7 @@ async function processResponse(response) {
               }
             }
           }
-            addMessage({ type: 'received-msg', text: result }, messageCounter);
+          addMessage({ type: 'received-msg', text: result }, messageCounter);
         } catch (error) {
           console.log(`Error parsing JSON: ${error}`);
         }
@@ -476,7 +501,7 @@ async function processResponse(response) {
 }
 
 
-function extractMessages() {
+function extractMessages(raw = false) {
   const messageHistory = [];
   const chatMessages = document.getElementById('chat-messages').children;
   const mode = document.getElementById("mode").value; // Make sure this element exists and captures the current model
@@ -484,6 +509,7 @@ function extractMessages() {
   for (const messageElement of chatMessages) {
     // Read the full message text from the data attribute
     let messageText = messageElement.innerText.trim();
+    if (raw) messageText = messageElement.innerHTML
 
     const messageContents = [];
     const images = messageElement.getElementsByClassName('user-upload-image');
@@ -634,66 +660,66 @@ function truncateFilename(filename, maxLength) {
 }
 
 async function updateInputMaxLength() {
-    const userMessageInput = document.getElementById("user-message");
-    const selectedMode = await getSelectedMode();
-    const uploadButton = document.getElementById('upload-image-button');
-    const imagePreviewContainer = document.getElementById('image-preview-container');
-    const deleteImageButton = document.getElementById('delete-image');
+  const userMessageInput = document.getElementById("user-message");
+  const selectedMode = await getSelectedMode();
+  const uploadButton = document.getElementById('upload-image-button');
+  const imagePreviewContainer = document.getElementById('image-preview-container');
+  const deleteImageButton = document.getElementById('delete-image');
 
-    // Reset image preview and hide container when model changes
-    function resetImageUI() {
-        imagePreviewContainer.style.display = 'none';
-        deleteImageButton.style.display = 'none';
-        base64Image = null;
-        document.getElementById('image-preview').src = '';
-        closeAllOptions();
-    }
+  // Reset image preview and hide container when model changes
+  function resetImageUI() {
+    imagePreviewContainer.style.display = 'none';
+    deleteImageButton.style.display = 'none';
+    base64Image = null;
+    document.getElementById('image-preview').src = '';
+    closeAllOptions();
+  }
 
-    if (selectedMode === "gpt-3.5-turbo") { 
-        userMessageInput.maxLength = 15000 * 3;
-        maxContent = 15000 * 3;
-        localStorage.setItem('selectedMode', selectedMode);
-        uploadButton.style.display = 'none';
-        resetImageUI();
-    } else if (selectedMode === "gpt-4") {
-        userMessageInput.maxLength = 7500 * 3;
-        maxContent = 7500 * 3;
-        localStorage.setItem('selectedMode', selectedMode);
-        uploadButton.style.display = 'none';
-        resetImageUI();
-    } else if (selectedMode === "gpt-4-32k") {
-        userMessageInput.maxLength = 31500 * 3;
-        maxContent = 27000 * 3;
-        localStorage.setItem('selectedMode', selectedMode);
-        uploadButton.style.display = 'none';
-        resetImageUI();
-    } else if (selectedMode === "gpt-4-turbo") {
-        userMessageInput.maxLength = 125000 * 3;
-        maxContent = 125000 * 3;
-        localStorage.setItem('selectedMode', selectedMode);
-        uploadButton.style.display = 'block';
-    } else if (selectedMode === "gpt-4o") {
-      userMessageInput.maxLength = 200000 * 3;
-      maxContent = 200000 * 3;
-      localStorage.setItem('selectedMode', selectedMode);
-      uploadButton.style.display = 'block';
-    }
-    else {
-        userMessageInput.maxLength = 15000 * 3; // Default case
-        maxContent = 15000 * 3; // Default case
-        localStorage.setItem('selectedMode', selectedMode);
-        uploadButton.style.display = 'none';
-        resetImageUI();
-    }
+  if (selectedMode === "gpt-3.5-turbo") {
+    userMessageInput.maxLength = 15000 * 3;
+    maxContent = 15000 * 3;
+    localStorage.setItem('selectedMode', selectedMode);
+  } else if (selectedMode === "gpt-4") {
+    userMessageInput.maxLength = 7500 * 3;
+    maxContent = 7500 * 3;
+    localStorage.setItem('selectedMode', selectedMode);
+  } else if (selectedMode === "gpt-4-32k") {
+    userMessageInput.maxLength = 31500 * 3;
+    maxContent = 27000 * 3;
+    localStorage.setItem('selectedMode', selectedMode);
+  } else if (selectedMode === "gpt-4-turbo") {
+    userMessageInput.maxLength = 125000 * 3;
+    maxContent = 125000 * 3;
+    localStorage.setItem('selectedMode', selectedMode);
+  } else if (selectedMode === "gpt-4o-mini") {
+    userMessageInput.maxLength = 200000 * 3;
+    maxContent = 200000 * 3;
+    localStorage.setItem('selectedMode', selectedMode);
+  } else if (selectedMode === "gpt-4o") {
+    userMessageInput.maxLength = 200000 * 3;
+    maxContent = 200000 * 3;
+    localStorage.setItem('selectedMode', selectedMode);
+  }
+  else {
+    userMessageInput.maxLength = 15000 * 3; // Default case
+    maxContent = 15000 * 3; // Default case
+    localStorage.setItem('selectedMode', selectedMode);
+  }
+  if(multiModals.includes(selectedMode)) {
+    uploadButton.style.display = 'block';
+  } else {
+    uploadButton.style.display = 'none';
+    resetImageUI()
+  }
 }
-document.getElementById('file-search-input').addEventListener('change', function () {
+document.getElementById('file-search-input').addEventListener('change', function() {
   filterFiles(false)
 });
 
 
 
 async function updateAvailableFiles(dropdown, path = './') {
-  while (dropdown.options.length > 0) { 
+  while (dropdown.options.length > 0) {
     dropdown.remove(0);
   }
   const excludedFileExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.mp3', '.mp4', '.svg', '.pdf', '.xlsx', '.pptx', '.zip', '.rar', '.svg'];
@@ -777,9 +803,9 @@ function updateFileTabTitles() {
     fileTabs.forEach(tab => {
       const filename = tab.id.replace('file-tab-', '');
       let disabledMessage = '';
-      if(tab.classList.contains('disabled')) {
-           disabledMessage = `, and since you opened the extension with this file it cannot be removed`;
-      } 
+      if (tab.classList.contains('disabled')) {
+        disabledMessage = `, and since you opened the extension with this file it cannot be removed`;
+      }
       tab.title = `GPT-Replit has opened the file '${filename}'${disabledMessage}. 
 The AI only will read the first '${maxFileTabs}' characters'`;
     });
@@ -832,7 +858,7 @@ function addFileTab(filename, disableDelete = false) {
   });
 
   // Handle middle-click deletion
-  fileTab.addEventListener('auxclick', function (event) {
+  fileTab.addEventListener('auxclick', function(event) {
     if (event.button === 1 && !disableDelete) { // middle-click
       fileTab.classList.add('delete-animation');
       setTimeout(() => tabsContainer.removeChild(fileTab), 500);
@@ -854,7 +880,7 @@ function addFileTab(filename, disableDelete = false) {
     removeButton.disabled = true;
     removeButton.title = "Cannot remove this file.";
   } else {
-    removeButton.onclick = function () {
+    removeButton.onclick = function() {
       fileTab.classList.add('delete-animation');
       setTimeout(() => tabsContainer.removeChild(fileTab), 500);
       useFiles[filename] = false;
@@ -868,7 +894,7 @@ function addFileTab(filename, disableDelete = false) {
   }
 
   // Handle middle-click deletion
-  fileTab.addEventListener('auxclick', function (event) {
+  fileTab.addEventListener('auxclick', function(event) {
     if (event.button === 1 && !disableDelete) { // middle-click
       fileTab.classList.add('delete-animation');
       setTimeout(() => tabsContainer.removeChild(fileTab), 500);
@@ -929,7 +955,7 @@ document.getElementById('add-file-button').addEventListener('drop', function(eve
 
   if (fileTab) {
     const filename = fileTab.id.replace('file-tab-', '');
-    useFiles[filename] = false; 
+    useFiles[filename] = false;
     fileTab.parentNode.removeChild(fileTab);
     const dropdown = document.getElementById('file-dropdown');
     if (dropdown) {
@@ -966,7 +992,7 @@ document.getElementById('add-file-button').addEventListener('drop', function(eve
 
   if (fileTab) {
     const filename = fileTab.id.replace('file-tab-', '');
-    useFiles[filename] = false; 
+    useFiles[filename] = false;
     fileTab.parentNode.removeChild(fileTab);
     const dropdown = document.getElementById('file-dropdown');
     if (dropdown) {
@@ -978,16 +1004,16 @@ document.getElementById('add-file-button').addEventListener('drop', function(eve
 
 
 document.getElementById('file-dropdown').addEventListener('change', function() {
-    const selectedFile = this.value;
-    if (selectedFile) {
-      addFileTab(selectedFile);
-      toggleOptions('file-input-options'); 
-      const dropdown = document.getElementById('file-dropdown');
-      if (dropdown) {
-        updateAvailableFiles(dropdown, "./");
-        filterFiles();
-      }
+  const selectedFile = this.value;
+  if (selectedFile) {
+    addFileTab(selectedFile);
+    toggleOptions('file-input-options');
+    const dropdown = document.getElementById('file-dropdown');
+    if (dropdown) {
+      updateAvailableFiles(dropdown, "./");
+      filterFiles();
     }
+  }
 });
 
 function toggleOptions(sectionId) {
@@ -1029,7 +1055,7 @@ document.getElementById('add-file-button').addEventListener('drop', function(eve
 
   if (fileTab) {
     const filename = fileTab.id.replace('file-tab-', '');
-    useFiles[filename] = false; 
+    useFiles[filename] = false;
     fileTab.parentNode.removeChild(fileTab);
     const dropdown = document.getElementById('file-dropdown');
     if (dropdown) {
@@ -1049,58 +1075,58 @@ function closeAllOptions() {
   ['image-input-options', 'file-input-options'].forEach(id => {
     const element = document.getElementById(id);
     element.classList.remove('show-options');
-    element.style.display = 'none', 500; 
+    element.style.display = 'none', 500;
   });
   filterFiles(true);
 }
 
 
-let base64Image = null; 
+let base64Image = null;
 
 async function compressToWebP(base64Data) {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.src = base64Data;
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.src = base64Data;
 
-        img.onload = () => {
-            let quality = 0.8;
-            const maxFileSize = 20 * 1024 * 1024; 
+    img.onload = () => {
+      let quality = 0.8;
+      const maxFileSize = 20 * 1024 * 1024;
 
-            const attemptCompression = () => {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                canvas.width = img.width;
-                canvas.height = img.height;
+      const attemptCompression = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = img.width;
+        canvas.height = img.height;
 
-                // Draw the image onto the canvas
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        // Draw the image onto the canvas
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-                // Convert the canvas content to WebP format and get new base64 string
-                const webpDataUrl = canvas.toDataURL('image/webp', quality);
+        // Convert the canvas content to WebP format and get new base64 string
+        const webpDataUrl = canvas.toDataURL('image/webp', quality);
 
-                // Calculate the approximate file size of the result
-                const fileSize = Math.round((webpDataUrl.length * 3 / 4));
+        // Calculate the approximate file size of the result
+        const fileSize = Math.round((webpDataUrl.length * 3 / 4));
 
-                if (fileSize > maxFileSize && quality > 0.1) {
-                    // Reduce quality and try again
-                    quality -= 0.1;
-                    attemptCompression();
-                } else if (fileSize <= maxFileSize) {
-                    // Satisfies file size condition
-                    resolve(webpDataUrl);
-                } else {
-                    // If the file size is still too large and quality is too low, reject
-                    reject('Unable to compress to desired file size');
-                }
-            };
+        if (fileSize > maxFileSize && quality > 0.1) {
+          // Reduce quality and try again
+          quality -= 0.1;
+          attemptCompression();
+        } else if (fileSize <= maxFileSize) {
+          // Satisfies file size condition
+          resolve(webpDataUrl);
+        } else {
+          // If the file size is still too large and quality is too low, reject
+          reject('Unable to compress to desired file size');
+        }
+      };
 
-            attemptCompression();
-        };
+      attemptCompression();
+    };
 
-        img.onerror = () => {
-            reject('Failed to load image from base64 data. Please check the data and try again.');
-        };
-    });
+    img.onerror = () => {
+      reject('Failed to load image from base64 data. Please check the data and try again.');
+    };
+  });
 }
 
 document.getElementById('image-url-input').addEventListener('paste', async function(event) {
@@ -1137,7 +1163,7 @@ document.getElementById('toggle-api-key-visibility').addEventListener('click', a
   }
   lastID.apiKeyVisibility = replit.messages.showNotice(`API key is now visible for ${timer} seconds`, 1500);
   // Update the timer every second
-  apiKeyTimerInterval= setInterval(() => {
+  apiKeyTimerInterval = setInterval(() => {
     timer--;
     viewApiKeyInput.title = `Input hides in ${timer} seconds`;
 
@@ -1175,7 +1201,7 @@ async function useImageUrl() {
     return;
   }
 
-  if (imageUrl.startsWith("replit://") ) {
+  if (imageUrl.startsWith("replit://")) {
     const localFilePath = imageUrl.replace("replit://", "./");
     try {
       const fileContent = await replit.fs.readFile(localFilePath, "base64");
@@ -1200,7 +1226,7 @@ async function useImageUrl() {
       lastID.uplaodloccalfile = await replit.messages.showConfirm("Successfully uploaded local iamge", 2000)
     } catch (error) {
       console.error("Failed to load or process local image:", error);
-      
+
       UrlButton.disabled = true;
       UrlButton.innerText = "Failed loading image";
       setTimeout(function() {
@@ -1278,13 +1304,13 @@ function loadImagePreview(base64Src) {
   const imagePreviewContainer = document.getElementById('image-preview-container');
   const deleteImageButton = document.getElementById('delete-image');
   const imgPreview = document.getElementById('image-preview');
-    uploadButton.style.display = 'block';
-    imagePreviewContainer.style.display = 'block';
-    deleteImageButton.style.display = 'block';
-    
-    imgPreview.src = base64Src;
-    document.getElementById('image-preview-container').style.display = 'block'; 
-    base64Image = base64Src; 
+  uploadButton.style.display = 'block';
+  imagePreviewContainer.style.display = 'block';
+  deleteImageButton.style.display = 'block';
+
+  imgPreview.src = base64Src;
+  document.getElementById('image-preview-container').style.display = 'block';
+  base64Image = base64Src;
 }
 
 
@@ -1308,14 +1334,14 @@ document.getElementById('image-file-input').addEventListener('change', async fun
     toggleOptions("image-input-options")
   } catch (error) {
     const UrlButton = document.getElementById("use-image-url-button")
-      UrlButton.disabled = true
-      UrlButton.innerText = "Failed loading image"
-      setTimeout(function() {
-          UrlButton.disabled = false
-          UrlButton.innerText = "Use URL"
-      }, 2500)
+    UrlButton.disabled = true
+    UrlButton.innerText = "Failed loading image"
+    setTimeout(function() {
+      UrlButton.disabled = false
+      UrlButton.innerText = "Use URL"
+    }, 2500)
     return
-    
+
   }
 });
 
