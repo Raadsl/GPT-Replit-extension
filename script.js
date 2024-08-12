@@ -1504,11 +1504,9 @@ document.getElementById('settings-btn').addEventListener('click', async () => {
     document.getElementById('noyap-btn').checked = settings.hasOwnProperty('noyap') ? settings.noyap : true;
     document.getElementById('disable-streaming').checked = settings.hasOwnProperty('disableStreaming') ? settings.disableStreaming : false;
     
-    const useCheckbox = document.getElementById('use');
-    const isChecked = useCheckbox.checked;
-    document.getElementById('temperature').disabled = !isChecked;
-    document.getElementById('model').disabled = !isChecked;
-    document.getElementById('custom-server').disabled = !isChecked;
+    document.getElementById('temperature').disabled = !settings.used;
+    document.getElementById('model').disabled = !settings.used;
+    document.getElementById('custom-server').disabled = !settings.used;
 
     clearInterval(apiKeyTimerInterval);
     document.getElementById('api-key-label').style.display = 'none';
@@ -1542,7 +1540,10 @@ document.getElementById('save-settings-button').addEventListener('click', async 
     disableStreaming: document.getElementById('disable-streaming').checked,
   };
   saveSettings(settings);
-
+  document.getElementById('temperature').disabled = !settings.used;
+  document.getElementById('model').disabled = !settings.used;
+  document.getElementById('custom-server').disabled = !settings.used;
+  
   if (lastID.save) {
     await replit.messages.hideMessage(lastID.save);
   }
@@ -1595,6 +1596,7 @@ async function customModelUpdate() {
     if (disabledOption) {
       modelSelect.removeChild(disabledOption);
     }
+    
     modelSelect.title = 'select which GPT model you want to use.'
     modelSelect.disabled = false;
   }
