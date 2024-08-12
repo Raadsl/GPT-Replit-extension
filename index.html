@@ -118,12 +118,12 @@
     setTimeout(function() {
       loadingScreen.style.display = 'none';
     }, 450);
-  console.log("[Replit-GPT] loaded! V1.8.2")
+  console.log("[Replit-GPT] loaded! V1.8.3")
   </script>
 </head>
 <body>
   <div id="loading-screen" aria-labelledby="loading-screen">
-    <div title="We're initializing the extension" class="ring"> V1.8.2
+    <div title="We're initializing the extension" class="ring"> V1.8.3
       <circlespan></circlespan>
       <p>Initialising</p>
     </div>
@@ -236,6 +236,13 @@
       <input id='noyap-btn' type="checkbox">
       <span class="checkbox-mark"></span>
     </label>
+    <!-- Add this inside the settings modal -->
+    <label title='Disable streaming to wait for full response. If you enable this setting the performance could increase significantly' class="checkbox-container">
+      Disable Streaming
+      <input id='disable-streaming' type="checkbox">
+      <span class="checkbox-mark"></span>
+    </label>
+
     <!--
     <label title='Toggle display of error messages in the console. This will still show error messages in the chat history and replit alerts.' class="checkbox-container">
         Show Error Messages

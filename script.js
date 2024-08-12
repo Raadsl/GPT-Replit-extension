@@ -34,12 +34,16 @@ async function copyCodeBlocks(codeBlock, event) {
   selection.addRange(range);
 
   try {
-    await navigator.clipboard.writeText(textToCopy);
-    triggerConfetti(event);
-    if (lastID.copy) {
-      await replit.messages.hideMessage(lastID.copy);
+    if (document.hasFocus()) {
+      await navigator.clipboard.writeText(textToCopy);
+      triggerConfetti(event);
+      if (lastID.copy) {
+        await replit.messages.hideMessage(lastID.copy);
+      }
+      lastID.copy = await replit.messages.showConfirm("Codeblock copied!", 1500);
+    } else {
+      throw new Error('Document is not focused');
     }
-    lastID.copy = await replit.messages.showConfirm("Codeblock copied!", 1500);
   } catch (err) {
     console.error('Failed to copy text:', err);
     if (lastID.copy) {
@@ -48,6 +52,7 @@ async function copyCodeBlocks(codeBlock, event) {
     lastID.copy = await replit.messages.showNotice("Failed to copy codeblock. Error: " + err.message, 1500);
   }
 }
+
 
 
 
@@ -86,7 +91,7 @@ function getSelectedTextWithin(element) {
 }
 
 function exportMessageHistory() {
-  const messageHistory = extractMessages(true);
+  const messageHistory = chatMessageHistory
   const dataStr = JSON.stringify(messageHistory);
   const dataBlob = new Blob([dataStr], { type: 'application/json' });
   const url = URL.createObjectURL(dataBlob);
@@ -155,7 +160,7 @@ function addMessage(x, id = null) {
   if (!x.noMD) {
     messageDiv.innerHTML = DOMPurify.sanitize(marked.parse((x.text), { mangle: false, headerIds: false }), { USE_PROFILES: { html: true } });
   } else {
-    messageDiv.innerHTML = DOMPurify.sanitize(x.text, { USE_PROFILES: { html: true } });
+    messageDiv.innerHTML = DOMPurify.sanitize(x.text, { mangle: false, headerIds: false }, {USE_PROFILES: { html: true } });
   }
 
   MathJax.typesetPromise([messageDiv]);
@@ -314,35 +319,6 @@ async function getSelectedMode() {
 
 let messageCounter = 1;
 
-async function fetchAssistantResponse(apiKey, mode, history, temperature, server) {
-  if (!server) {
-    server = 'api.openai.com'
-  }
-  try {
-    let response = await fetch(`https://${server}/v1/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + apiKey
-      },
-      body: JSON.stringify({
-        'model': mode,
-        'messages': history,
-        'temperature': parseFloat(temperature),
-        'stream': true
-      })
-    });
-    if (!response.ok) {
-      console.log(`HTTP error! status: ${response.status}`)
-    }
-    return response;
-
-  } catch (error) {
-    console.log('There was a problem with the fetch operation: ' + error.message);
-    console.log(error)
-    toggleGenerating(false)
-  }
-}
 
 function toggleGenerating(value) {
   const headerBanner = document.getElementById("headerbanner")
@@ -354,57 +330,112 @@ function toggleGenerating(value) {
   }
 }
 
+async function fetchAssistantResponse(apiKey, mode, history, temperature, server, stream = true) {
+  console.log(history)
+  if (!server) {
+    server = 'api.openai.com';
+  }
+  try {
+    let response = await fetch(`https://${server}/v1/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + apiKey
+      },
+      body: JSON.stringify({
+        model: mode,
+        messages: history,
+        temperature: parseFloat(temperature),
+        stream: stream
+      })
+    });
 
+    // Check if the response is not ok
+    console.log(response)
+    if (!response.ok) {
+      const errorResponse = await response.json();
+      console.log(`HTTP error! status: ${response.status}`);
+      throw new Error(errorResponse.error.message || `HTTP error! status: ${response.status}`);
+    }
 
+    return response;
+
+  } catch (error) {
+    console.error('There was a problem with the fetch operation: ' + error.message);
+    toggleGenerating(false);
+    throw error; // Re-throw the error to be handled by the caller
+  }
+}
+  
 async function getResp() {
   submit.disabled = true;
   stopButton.disabled = false;
   stopAI = false;
   toggleGenerating(true);
   closeAllOptions();
+
   const promptText = document.getElementById("user-message").value;
-  if (promptText == "" || promptText == " ") {
+  if (promptText.trim() === "") {
     submit.disabled = false;
     stopButton.disabled = true;
     stopAI = false;
     toggleGenerating(false);
-    return;
+    return; 
   }
-  messageCounter++;
 
-  const messageId = messageCounter;
+  messageCounter++;
   const selectedMode = await getSelectedMode();
+
+  let messageContent = [{ type: 'text', text: escapeHtml(promptText) }];
+
   if (base64Image && multiModals.includes(selectedMode)) {
-    addMessage({ type: 'user-msg', text: escapeHtml(promptText), noMD: true, image: base64Image }, messageId);
+    messageContent.push({
+      type: 'image_url',
+      image_url: { url: base64Image }
+    });
+    console.log(messageContent);
+    addMessage({ type: 'user-msg', text: promptText, noMD: true, image: base64Image });
   } else {
-    addMessage({ type: 'user-msg', text: escapeHtml(promptText), noMD: true }, messageId);
+    addMessage({ type: 'user-msg', text: escapeHtml(promptText), noMD: true });
+    base64Image = null; // Clear the image if not supported
   }
+
   document.getElementById("user-message").value = "";
   const apiKey = document.getElementById("KEY").value;
   const yapsettings = loadRawSettings();
-  let noyap = "";
-  if (yapsettings && yapsettings.hasOwnProperty("noyap") && yapsettings.noyap) {
-    noyap = `No yapping, so keep your answers as short as possible. `;
+  if (!apiKey) {
+    alert('API key is missing. Please provide a valid API key.');
+    return;
   }
-
-  let systemMessage = `You are helpful programming assistant called Replit-GPT. ${noyap}`;
+  let systemMessage = `You are a helpful programming assistant called Replit-GPT.`;
+  if (yapsettings && yapsettings.hasOwnProperty("noyap") && yapsettings.noyap) {
+    systemMessage += `No yapping, so keep your answers as short as possible. `;
+  }
   const fileContents = {};
   let history = [...chatMessageHistory];
+
+  // Remove id fields from history
+  history = history.map(({ id, ...rest }) => rest);
+
   if (Object.keys(useFiles).length > 0) {
     let filesInfo = [];
     for (const filePath in useFiles) {
       if (useFiles[filePath]) {
-        let fileContent = await replit.fs.readFile(filePath, "utf8");
-        if (fileContent.error) {
-          await replit.messages.showError(`Error reading file ${filePath}`, 2000);
+        if (filePath == "Directory Structure dont name your file like this bluid!") {
+          fileContents[filePath] = await getDirectoryStructure('./');
+          filesInfo.push('- File structure: \n' + fileContents[filePath]);
         } else {
-          fileContents[filePath] = fileContent.content;
-          let previewLength = Math.floor((maxContent / Object.keys(fileContents).length) - 1000);
-          filesInfo.push(`- File path: ${filePath}\n- File Content Preview: \`\`\`${fileContent.content.substring(0, previewLength)}\`\`\``);
+          let fileContent = await replit.fs.readFile(filePath, "utf8");
+          if (fileContent.error) {
+            await replit.messages.showError(`Error reading file ${filePath}`, 2000);
+          } else {
+            fileContents[filePath] = fileContent.content;
+            let previewLength = Math.floor((maxContent / Object.keys(fileContents).length) - 1000);
+            filesInfo.push(`- File path: ${filePath}\n- File Content Preview: \`\`\`${fileContent.content.substring(0, previewLength)}\`\`\``);
+          }
         }
       }
     }
-
     if (filesInfo.length > 0) {
       systemMessage += " The user might ask something related to the contents of the following file(s):\n" + filesInfo.join('\n');
     }
@@ -420,33 +451,51 @@ async function getResp() {
 
   history.unshift({ role: "system", content: systemMessage });
 
-  const mode = await getSelectedMode();
   const settings = loadRawSettings();
   const customTemperature = settings && settings.temperature ? parseFloat(settings.temperature) : 0.7;
+  const disableStreaming = settings && settings.disableStreaming;
   let rawsettings = loadRawSettings();
   if (rawsettings == null) {
     rawsettings = {
       server: 'api.openai.com'
     };
   }
-  try {
-    const response = await fetchAssistantResponse(apiKey, mode, history, customTemperature, rawsettings.server);
-    if (response.status !== 200) {
-      const errorResponse = await response.json();
-      throw new Error(errorResponse.error.message);
-    }
-    await processResponse(response);
-  } catch (error) {
-    console.log(`Error fetching response: ${error}`);
-    toggleGenerating(false);
+  if (disableStreaming) {
     messageCounter++;
-    addMessage({ type: 'error-msg', text: `Error fetching response, ${error.message}` }, messageCounter);
+    addMessage({ type: 'received-msg', text: `<div id="loading-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`, noMD: true }, messageCounter);
+  }
+
+  try {
+    const response = await fetchAssistantResponse(apiKey, selectedMode, history, customTemperature, rawsettings.server, !disableStreaming);
+    if (disableStreaming) {
+      const responseText = await response.text();
+      try {
+        const cleanedResponse = responseText.replaceAll("", "");
+        const data = JSON.parse(cleanedResponse);
+        addMessage({ type: 'received-msg', text: data.choices[0].message.content }, messageCounter);
+        messageCounter++;
+        toggleGenerating(false);
+      } catch (jsonError) {
+        console.error(`JSON parsing error: ${jsonError.message}`);
+        addMessage({ type: 'error-msg', text: `Error parsing response JSON, ${jsonError.message}` });
+        messageCounter++;
+      }
+    } else {
+      await processResponse(response);
+    }
+  } catch (error) {
+    console.error(`Error fetching response: ${error}`);
+    toggleGenerating(false);
+    addMessage({ type: 'error-msg', text: `Error fetching response, ${error.message}` });
   }
 
   submit.disabled = false;
   stopButton.disabled = true;
-  console.log(chatMessageHistory);
 }
+
+
+
+
 
 
 async function processResponse(response) {
@@ -501,48 +550,6 @@ async function processResponse(response) {
 }
 
 
-function extractMessages(raw = false) {
-  const messageHistory = [];
-  const chatMessages = document.getElementById('chat-messages').children;
-  const mode = document.getElementById("mode").value; // Make sure this element exists and captures the current model
-
-  for (const messageElement of chatMessages) {
-    // Read the full message text from the data attribute
-    let messageText = messageElement.innerText.trim();
-    if (raw) messageText = messageElement.innerHTML
-
-    const messageContents = [];
-    const images = messageElement.getElementsByClassName('user-upload-image');
-
-    if (multiModals.includes(mode) && images.length > 0) {
-      messageText += "[ image uploaded by user using another GPT model able to see images. ]";
-    }
-
-    messageContents.push({
-      type: 'text',
-      text: messageText
-    });
-
-    if (multiModals.includes(mode)) {
-      for (const img of images) {
-        messageContents.push({
-          type: 'image_url',
-          image_url: { url: img.src }
-        });
-      }
-    }
-
-    const messageObject = {
-      role: messageElement.classList.contains('user-msg') ? 'user' : (messageElement.classList.contains('system-msg') ? 'system' : 'assistant'),
-      content: messageContents
-    };
-
-    messageHistory.push(messageObject);
-  }
-
-  return messageHistory;
-}
-
 
 
 
@@ -557,8 +564,17 @@ input.addEventListener("keypress", function(event) {
 });
 
 
-stopButton.addEventListener("click", () => {
-  stopAI = true;
+stopButton.addEventListener("click", async () => {
+  const settings = loadRawSettings();
+  const disableStreaming = settings && settings.disableStreaming;
+  if (!disableStreaming) {
+    stopAI = true;
+  } else {
+    if (lastID.stopinnostream) {
+      await replit.messages.hideMessage(lastID.stopinnostream)
+    }
+    lastID.stopinnostream = await replit.messages.showError("The response cannot be stopped in no streaming mode. Change the setting if you want to stop the response when it is not finished yet.", 5500)
+  }
 });
 
 async function getEncryptionKey() {
@@ -595,6 +611,28 @@ async function decryptApiKey(encryptedApiKey) {
   }
   return decryptedKey;
 }
+
+async function getDirectoryStructure(path, indent = '  | ') {
+  try {
+  const entries = await replit.fs.readDir(path);
+  const projectname = await replit.data.currentRepl()
+  let structure = `${projectname.repl.slug}/\n${indent}\n`; // Add this line
+
+  for (const entry of entries.children) {
+    if (entry.type === 'DIRECTORY' && !entry.filename.startsWith('.') && !excludedDirectories.includes(entry.filename)) {
+      structure += `${indent}├── ${entry.filename}/\n`;
+      structure += await getDirectoryStructure(`${path}${entry.filename}/`, indent + '  | ');
+    } else if (entry.type === 'FILE') {
+      structure += `${indent}├── ${entry.filename}\n`;
+    }
+  }
+  
+  return structure;
+  } catch(err) {
+    return err
+  }
+}
+
 
 const passwordInput = document.getElementById('KEY');
 const NEW_STORAGE_KEY = 'ENCRYPTED-OPENAI-API-KEY_GPT-REPLIT';
@@ -722,14 +760,24 @@ async function updateAvailableFiles(dropdown, path = './') {
   while (dropdown.options.length > 0) {
     dropdown.remove(0);
   }
-  const excludedFileExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.mp3', '.mp4', '.svg', '.pdf', '.xlsx', '.pptx', '.zip', '.rar', '.svg'];
-  const excludedDirectories = ['node_modules', '.git', 'venv', 'dist', 'build'];
+  const excludedFileExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.mp3', '.mp4', '.svg', '.pdf', '.xlsx', '.pptx', '.zip', '.rar', '.svg'];
+  const excludedDirectories = ['node_modules', '.git', 'venv', 'dist', 'build', "__pycache__", "var", "lib", "bin", "node_modules", "cpython_debug", "logs", "psd", "thumb", "sketch"];
 
   const option = document.createElement('option');
   option.text = 'Choose file';
   option.disabled = true;
   option.selected = true;
   dropdown.appendChild(option);
+
+  const directoryStructureTabExists = useFiles["Directory Structure dont name your file like this bluid!"] == true
+  if (!directoryStructureTabExists) {
+    const dirStructureOption = document.createElement('option');
+    dirStructureOption.value = 'directory-structure';
+    dirStructureOption.text = 'Directory Structure';
+    directoryStructure = await getDirectoryStructure("./")
+    dirStructureOption.title = directoryStructure;
+    dropdown.appendChild(dirStructureOption);
+  }
 
   async function processDirectory(path) {
     const entries = await replit.fs.readDir(path);
@@ -751,8 +799,9 @@ async function updateAvailableFiles(dropdown, path = './') {
     }
   }
   await processDirectory(path);
-  filterFiles()
+  filterFiles();
 }
+
 
 function filterFiles(reset = false) {
   const searchInput = document.getElementById('file-search-input');
@@ -792,7 +841,21 @@ function filterFiles(reset = false) {
   }
 }
 
+function removeDuplicateFileTabs() {
+  const tabsContainer = document.querySelector('.files-tabs-container');
+  const fileTabs = tabsContainer.querySelectorAll('.file-tab');
+  const seenTabs = new Set();
 
+  fileTabs.forEach(tab => {
+    const filename = tab.id.replace('file-tab-', '');
+    if (seenTabs.has(filename)) {
+      tabsContainer.removeChild(tab);
+    } else {
+      seenTabs.add(filename);
+    }
+  });
+}
+  
 function updateFileTabTitles() {
   const tabsContainer = document.querySelector('.files-tabs-container');
   const fileTabs = tabsContainer.querySelectorAll('.file-tab');
@@ -801,6 +864,7 @@ function updateFileTabTitles() {
   if (numFiles > 0) {
     const maxFileTabs = Math.floor((maxContent / numFiles) - 1000);
     fileTabs.forEach(tab => {
+      if(tab.id !="file-directory-structure") {
       const filename = tab.id.replace('file-tab-', '');
       let disabledMessage = '';
       if (tab.classList.contains('disabled')) {
@@ -808,25 +872,37 @@ function updateFileTabTitles() {
       }
       tab.title = `GPT-Replit has opened the file '${filename}'${disabledMessage}. 
 The AI only will read the first '${maxFileTabs}' characters'`;
+      }
     });
   }
 }
-function addFileTab(filename, disableDelete = false) {
+
+async function addFileTab(filename, disableDelete = false) {
+  if (useFiles[filename]) {
+    return;
+  }
   const tabsContainer = document.querySelector('.files-tabs-container');
   const fileTab = document.createElement('div');
   fileTab.classList.add('file-tab');
   if (disableDelete) {
     fileTab.classList.add('disabled');
   }
+
   fileTab.id = `file-tab-${filename}`;
   fileTab.title = `GPT-replit has opened the file ${filename}`;
+  
+  
   if (!disableDelete) {
     fileTab.setAttribute('draggable', 'true');
   }
   const displayName = filename.replace(/^\.\//, '');
   const truncatedFilename = truncateFilename(displayName, 20);
   fileTab.textContent = truncatedFilename;
-
+  if (filename == "Directory Structure dont name your file like this bluid!") {
+    fileTab.id = `file-directory-structure`;
+    fileTab.textContent = "Directory Structure";
+    fileTab.title = await getDirectoryStructure("./")
+  }
   // Handle dragging
   fileTab.addEventListener('dragstart', (event) => {
     if (!disableDelete) {
@@ -908,11 +984,10 @@ function addFileTab(filename, disableDelete = false) {
     }
   });
 
-  useFiles[filename] = true;
+  useFiles[filename] = true; //!!
   fileTab.appendChild(removeButton);
-  tabsContainer.appendChild(fileTab);
-
-  updateFileTabTitles();
+  tabsContainer.appendChild(fileTab); 
+  updateFileTabTitles();  
 }
 
 function getDragAfterElement(container, x) {
@@ -1003,10 +1078,14 @@ document.getElementById('add-file-button').addEventListener('drop', function(eve
 });
 
 
-document.getElementById('file-dropdown').addEventListener('change', function() {
+document.getElementById('file-dropdown').addEventListener('change', async function() {
   const selectedFile = this.value;
   if (selectedFile) {
-    addFileTab(selectedFile);
+    if (selectedFile === 'directory-structure') {
+      addFileTab("Directory Structure dont name your file like this bluid!");
+    } else {
+      addFileTab(selectedFile);
+    }
     toggleOptions('file-input-options');
     const dropdown = document.getElementById('file-dropdown');
     if (dropdown) {
@@ -1015,6 +1094,7 @@ document.getElementById('file-dropdown').addEventListener('change', function() {
     }
   }
 });
+
 
 function toggleOptions(sectionId) {
   const sections = ['image-input-options', 'file-input-options'];
@@ -1404,6 +1484,7 @@ document.getElementById('reset-settings-button').addEventListener('click', async
     document.getElementById('copy-button').checked = false;
     document.getElementById('noyap-btn').checked = false;
     document.getElementById('custom-server').value = 'api.openai.com';
+    document.getElementById('disable-streaming').checked = false;
 
     if (lastID.reset) {
       await replit.messages.hideMessage(lastID.reset)
@@ -1421,7 +1502,8 @@ document.getElementById('settings-btn').addEventListener('click', async () => {
     document.getElementById('model').value = settings.model || 'gpt-3.5-turbo';
     document.getElementById('copy-button').checked = settings.hasOwnProperty('copyButton') ? settings.copyButton : true;
     document.getElementById('noyap-btn').checked = settings.hasOwnProperty('noyap') ? settings.noyap : true;
-
+    document.getElementById('disable-streaming').checked = settings.hasOwnProperty('disableStreaming') ? settings.disableStreaming : false;
+    
     const useCheckbox = document.getElementById('use');
     const isChecked = useCheckbox.checked;
     document.getElementById('temperature').disabled = !isChecked;
@@ -1457,6 +1539,7 @@ document.getElementById('save-settings-button').addEventListener('click', async 
     copyButton: document.getElementById('copy-button').checked,
     noyap: document.getElementById('noyap-btn').checked,
     server: document.getElementById('custom-server').value,
+    disableStreaming: document.getElementById('disable-streaming').checked,
   };
   saveSettings(settings);
 
@@ -1532,6 +1615,7 @@ setInterval(async function() {
   if (dropdown) {
     updateAvailableFiles(dropdown, "./");
   }
+  removeDuplicateFileTabs();
 }, 60000);
 setInterval(updateMemoryUsage, 1000);
 
