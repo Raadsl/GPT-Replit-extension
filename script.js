@@ -462,7 +462,7 @@ async function getResp() {
   }
   if (disableStreaming) {
     messageCounter++;
-    addMessage({ type: 'received-msg', text: `<div id="loading-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`, noMD: true }, messageCounter);
+    addMessage({ type: 'received-msg', text: `<div id="loading-dots" title='You are using the no streaming setting. The response is currently being cooked up.'><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`, noMD: true }, messageCounter);
   }
 
   try {
