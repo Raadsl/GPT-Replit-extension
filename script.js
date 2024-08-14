@@ -9,7 +9,8 @@ let lastID = {}
 const useFiles = {};
 const multiModals = ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"]
 let chatMessageHistory = [];
-
+const excludedFileExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.mp3', '.mp4', '.svg', '.pdf', '.xlsx', '.pptx', '.zip', '.rar', '.svg'];
+const excludedDirectories = ['node_modules', '.git', 'venv', 'dist', 'build', "__pycache__", "var", "lib", "bin", "node_modules", "cpython_debug", "logs", "psd", "thumb", "sketch"];
 
 let clickTimer = null;
 
@@ -612,26 +613,31 @@ async function decryptApiKey(encryptedApiKey) {
   return decryptedKey;
 }
 
-async function getDirectoryStructure(path, indent = '  | ') {
-  try {
-  const entries = await replit.fs.readDir(path);
-  const projectname = await replit.data.currentRepl()
-  let structure = `${projectname.repl.slug}/\n${indent}\n`; // Add this line
+async function getProjectName() {
+  replname = await replit.data.currentRepl()
+  return replname.repl.slug
+}
 
-  for (const entry of entries.children) {
-    if (entry.type === 'DIRECTORY' && !entry.filename.startsWith('.') && !excludedDirectories.includes(entry.filename)) {
-      structure += `${indent}├── ${entry.filename}/\n`;
-      structure += await getDirectoryStructure(`${path}${entry.filename}/`, indent + '  | ');
-    } else if (entry.type === 'FILE') {
-      structure += `${indent}├── ${entry.filename}\n`;
+async function getDirectoryStructure(path, indent = '  | ', isRoot = true) {
+  try {
+    const entries = await replit.fs.readDir(path);
+    let structure = isRoot ? `${await getProjectName()}/\n` : '';
+
+    for (const entry of entries.children) {
+      if (entry.type === 'DIRECTORY' && !entry.filename.startsWith('.') && !excludedDirectories.includes(entry.filename)) {
+        structure += `${indent}├── ${entry.filename}/\n`;
+        structure += await getDirectoryStructure(`${path}${entry.filename}/`, indent + '  | ', false);
+      } else if (entry.type === 'FILE') {
+        structure += `${indent}├── ${entry.filename}\n`;
+      }
     }
-  }
-  
-  return structure;
-  } catch(err) {
-    return err
+
+    return structure;
+  } catch (err) {
+    return err.toString();
   }
 }
+
 
 
 const passwordInput = document.getElementById('KEY');
@@ -760,8 +766,7 @@ async function updateAvailableFiles(dropdown, path = './') {
   while (dropdown.options.length > 0) {
     dropdown.remove(0);
   }
-  const excludedFileExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.mp3', '.mp4', '.svg', '.pdf', '.xlsx', '.pptx', '.zip', '.rar', '.svg'];
-  const excludedDirectories = ['node_modules', '.git', 'venv', 'dist', 'build', "__pycache__", "var", "lib", "bin", "node_modules", "cpython_debug", "logs", "psd", "thumb", "sketch"];
+  
 
   const option = document.createElement('option');
   option.text = 'Choose file';
